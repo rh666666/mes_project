@@ -9,3 +9,21 @@ dependencies = [
     "djangorestframework>=3.16.1",
     "python-dotenv>=1.2.1",
 ]
+
+[tool.ruff]
+line-length = 200
+
+[tool.ruff.lint]
+extend-select = ["F401", "E501"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+indent-style = "space"
+quote-style = "double"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.14",
+]
