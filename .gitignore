@@ -1,0 +1,76 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+venv/
+env/
+env.local/
+env.*
+
+# IDE/编辑器相关
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# HBuilderX 编辑器
+.hbuilderx/
+
+# 操作系统相关
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 日志文件
+*.log
+logs/
+
+# 数据库文件
+*.sqlite3
+*.db
+
+# 环境变量文件
+.env
+.env.local
+.env.*.local
+
+# 测试覆盖率文件
+coverage.xml
+.coverage
+.coverage.*
+
+# 临时文件
+tmp/
+temp/
+
+# 包管理器
+.pip/
+.pypoetry/
+
+# 前端相关
+node_modules/
+package-lock.json
+yarn.lock
+unpackage/
+
+# 后端相关
+.trae/
+.python-version
+
+# 其他
+.tox/
+.mypy_cache/
+.pyre/
+.pytype/
+
