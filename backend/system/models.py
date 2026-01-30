@@ -1,6 +1,11 @@
+"""用户模型模块"""
+
 from django.db import models
 
-class Users(models.Model):
+
+class User(models.Model):
+    """用户模型"""
+
     username = models.CharField(max_length=100, verbose_name="用户名")
     password = models.CharField(max_length=100, verbose_name="密码")
     email = models.EmailField(max_length=100, verbose_name="邮箱")
