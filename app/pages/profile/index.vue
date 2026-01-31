@@ -1,42 +1,28 @@
 <template>
   <view class="page">
     <view class="content">
-      <!-- 登录表单模板 -->
-      <view class="login-container">
-
-        
-        <view class="login-form">
-          <view class="form-item">
-            <text class="form-label">账号</text>
-            <input 
-              class="form-input" 
-              type="text" 
-              placeholder="请输入账号"
-            />
-          </view>
-          
-          <view class="form-item">
-            <text class="form-label">密码</text>
-            <input 
-              class="form-input" 
-              type="password" 
-              placeholder="请输入密码"
-            />
-          </view>
-          
-          <view class="form-actions">
-            <view class="remember-forgot">
-              <label class="checkbox-label">
-                <checkbox />
-                <text>记住我</text>
-              </label>
-              <text class="forgot-password">忘记密码？</text>
-            </view>
-            
-            <button class="login-btn">登录</button>
-          </view>
+      <!-- 用户信息卡片 -->
+      <view class="user-card" @click="onUserCardClick">
+        <image
+          v-if="userInfo.avatar"
+          class="user-avatar-img"
+          :src="getAvatarUrl(userInfo.avatar)"
+          mode="aspectFill"
+        />
+        <view v-else class="user-avatar">
+          <text class="avatar-text">{{ displayName.charAt(0).toUpperCase() }}</text>
+        </view>
+        <view class="user-info">
+          <text class="user-name">{{ displayName }}</text>
+          <text class="user-role">{{ displayRole }}</text>
+        </view>
+        <view class="user-arrow" v-if="!isLoggedIn">
+          <text class="arrow-icon">></text>
         </view>
       </view>
+
+      <!-- 功能菜单 -->
+      <MenuList :menu-items="menuItems" @item-click="onMenuClick" />
     </view>
     <BottomNavBar :current-path="currentPath" @nav-change="onNavChange"></BottomNavBar>
   </view>
@@ -44,20 +30,150 @@
 
 <script>
   import BottomNavBar from '@/components/BottomNavBar.vue';
+  import MenuList from '@/components/MenuList.vue';
+  import authApi from '@/api/auth.js';
+  import { getStorageKey, getApiBaseURL } from '@/config/index.js';
 
   export default {
     components: {
-      BottomNavBar
+      BottomNavBar,
+      MenuList
     },
     data() {
       return {
-        currentPath: '/pages/profile/index'
+        currentPath: '/pages/profile/index',
+        isLoggedIn: false,
+        userInfo: {}
       };
     },
-    onLoad() {},
+    computed: {
+      menuItems() {
+        const items = [
+          { text: '设置', key: 'settings' },
+          { text: '关于', key: 'about' }
+        ];
+        if (this.isLoggedIn) {
+          items.push({
+            text: '退出登录',
+            key: 'logout',
+            textClass: 'danger'
+          });
+        }
+        return items;
+      },
+      displayName() {
+        if (!this.isLoggedIn) return '未登录';
+        return this.userInfo.name || '未设置昵称';
+      },
+      displayRole() {
+        if (!this.isLoggedIn) return '请点击登录';
+        return this.userInfo.signature || '已登录';
+      }
+    },
+    onShow() {
+      this.checkLoginStatus();
+    },
     methods: {
       onNavChange(item) {
         console.log('导航切换到:', item);
+      },
+      async checkLoginStatus() {
+        const token = uni.getStorageSync(getStorageKey('access_token'));
+        let userInfo = uni.getStorageSync(getStorageKey('user_info'));
+        this.isLoggedIn = !!token;
+        
+        if (this.isLoggedIn && !userInfo) {
+          // 有token但没有用户信息，尝试获取
+          try {
+            const res = await authApi.getProfile();
+            if (res.code === 2000) {
+              userInfo = {
+                id: res.data.id,
+                username: res.data.username,
+                name: res.data.name,
+                avatar: res.data.avatar,
+                signature: res.data.signature
+              };
+              uni.setStorageSync(getStorageKey('user_info'), userInfo);
+            }
+          } catch (error) {
+            console.error('获取个人信息失败:', error);
+          }
+        }
+        
+        this.userInfo = userInfo || {};
+      },
+      getAvatarUrl(avatar) {
+        if (!avatar) return '';
+        if (avatar.startsWith('http')) return avatar;
+        return getApiBaseURL() + avatar;
+      },
+      onUserCardClick() {
+        if (this.isLoggedIn) {
+          uni.navigateTo({
+            url: '/pages/profile/detail'
+          });
+        } else {
+          this.goToLogin();
+        }
+      },
+      goToLogin() {
+        uni.navigateTo({
+          url: '/pages/login/index'
+        });
+      },
+      onMenuClick(item) {
+        switch (item.key) {
+          case 'settings':
+            this.onSettings();
+            break;
+          case 'about':
+            this.onAbout();
+            break;
+          case 'logout':
+            this.onLogout();
+            break;
+        }
+      },
+      async onLogout() {
+        uni.showModal({
+          title: '提示',
+          content: '确定要退出登录吗？',
+          success: async (res) => {
+            if (res.confirm) {
+              try {
+                await authApi.logout();
+              } catch (error) {
+                console.error('注销请求失败:', error);
+              }
+
+              uni.removeStorageSync(getStorageKey('access_token'));
+              uni.removeStorageSync(getStorageKey('refresh_token'));
+              uni.removeStorageSync(getStorageKey('csrf_token'));
+              uni.removeStorageSync(getStorageKey('user_info'));
+
+              this.isLoggedIn = false;
+              this.userInfo = {};
+
+              uni.showToast({
+                title: '已退出登录',
+                icon: 'success'
+              });
+            }
+          }
+        });
+      },
+      onSettings() {
+        uni.showToast({
+          title: '设置功能开发中',
+          icon: 'none'
+        });
+      },
+      onAbout() {
+        uni.showToast({
+          title: '关于功能开发中',
+          icon: 'none'
+        });
       }
     }
   };
@@ -68,116 +184,75 @@
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    background-color: $uni-bg-color-grey;
+    background-color: $uni-md-background;
     padding-bottom: calc(100rpx + env(safe-area-inset-bottom));
     box-sizing: border-box;
   }
 
   .content {
     flex: 1;
-    padding: 40rpx;
+    padding: $uni-md-space-md;
   }
 
-  .login-container {
-    max-width: 500px;
-    margin: 0 auto;
-    padding: 40rpx;
-    background-color: $uni-bg-color;
-    border-radius: 12rpx;
-    box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.08);
-  }
-
-
-
-  .login-form {
-    margin-bottom: 32rpx;
-  }
-
-  .form-item {
-    margin-bottom: 28rpx;
-  }
-
-  .form-label {
-    display: block;
-    font-size: 24rpx;
-    font-weight: 500;
-    color: $uni-text-color;
-    margin-bottom: 12rpx;
-  }
-
-  .form-input {
-    width: 100%;
-    height: 80rpx;
-    padding: 0 24rpx;
-    background-color: $uni-bg-color;
-    border: 1rpx solid $uni-border-color;
-    border-radius: 8rpx;
-    font-size: 24rpx;
-    color: $uni-text-color;
-    box-sizing: border-box;
-  }
-
-  .form-input::placeholder {
-    color: $uni-text-color-placeholder;
-  }
-
-  .form-actions {
-    margin-top: 40rpx;
-  }
-
-  .remember-forgot {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 32rpx;
-  }
-
-  .checkbox-label {
+  .user-card {
     display: flex;
     align-items: center;
-    gap: 8rpx;
-    font-size: 22rpx;
-    color: $uni-text-color-grey;
+    background-color: $uni-md-surface;
+    border-radius: $uni-md-radius-large;
+    padding: $uni-md-space-xl;
+    margin-bottom: $uni-md-space-lg;
+    box-shadow: $uni-md-shadow-sm;
   }
 
-  .forgot-password {
-    font-size: 22rpx;
-    color: $uni-color-primary;
-  }
-
-  .login-btn {
-    width: 100%;
-    height: 80rpx;
-    background-color: $uni-color-primary;
-    color: white;
-    border: none;
-    border-radius: 8rpx;
-    font-size: 28rpx;
-    font-weight: 500;
-  }
-
-  .login-btn::after {
-    border: none;
-  }
-
-  .placeholder-content {
-    flex: 1;
+  .user-avatar {
+    width: 120rpx;
+    height: 120rpx;
+    border-radius: 50%;
+    background-color: $uni-md-color-primary;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 40rpx;
+    margin-right: $uni-md-space-lg;
   }
 
-  .placeholder-title {
-    font-size: 48rpx;
+  .user-avatar-img {
+    width: 120rpx;
+    height: 120rpx;
+    border-radius: 50%;
+    margin-right: $uni-md-space-lg;
+    background-color: $uni-md-surface;
+  }
+
+  .avatar-text {
+    font-size: $uni-font-size-lg;
+    color: white;
+    font-weight: 500;
+  }
+
+  .user-info {
+    flex: 1;
+  }
+
+  .user-name {
+    display: block;
+    font-size: $uni-font-size-lg;
     font-weight: 600;
-    color: $uni-text-color;
-    margin-bottom: 20rpx;
+    color: $uni-md-text-primary;
+    margin-bottom: $uni-md-space-xs;
   }
 
-  .placeholder-desc {
-    font-size: 28rpx;
-    color: $uni-text-color-grey;
+  .user-role {
+    display: block;
+    font-size: $uni-font-size-base;
+    color: $uni-md-text-secondary;
+  }
+
+  .user-arrow {
+    padding: $uni-md-space-sm;
+  }
+
+  .arrow-icon {
+    font-size: $uni-font-size-lg;
+    color: $uni-md-text-tertiary;
   }
 </style>

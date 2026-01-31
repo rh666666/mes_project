@@ -1,0 +1,16 @@
+{
+  "env": "production",
+  "api": {
+    "baseURL": "https://api.example.com",
+    "timeout": 15000,
+    "retry": 3
+  },
+  "storage": {
+    "prefix": "mes_"
+  },
+  "features": {
+    "enableLog": false,
+    "enableMock": false,
+    "enableSentry": true
+  }
+}
