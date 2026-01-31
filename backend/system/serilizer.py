@@ -14,7 +14,7 @@ class UserSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = SystemUser
-        fields = ['id', 'username', 'email', 'name', 'phone', 'role', 'signature']
+        fields = ['id', 'username', 'email', 'name', 'phone', 'role', 'signature', 'avatar']
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
@@ -28,7 +28,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SystemUser
-        fields = ['username', 'password', 'email', 'name', 'phone', 'role']
+        fields = ['username', 'password', 'email', 'name', 'phone', 'role', 'avatar']
 
     def create(self, validated_data):
         """创建新用户
@@ -45,6 +45,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
             email=validated_data.get('email', ''),
             name=validated_data.get('name', ''),
             phone=validated_data.get('phone', ''),
-            role=validated_data.get('role', '')
+            role=validated_data.get('role', ''),
+            avatar=validated_data.get('avatar', None)
         )
         return user

@@ -1,7 +1,25 @@
 """用户模型模块"""
 
+import os
+import uuid
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+
+
+def user_avatar_path(instance, filename):
+    """生成用户头像的存储路径
+
+    Args:
+        instance: User 模型实例
+        filename: 原始文件名
+
+    Returns:
+        str: 文件路径，格式为 avatars/user_{id}_{random}.{ext}
+    """
+    ext = os.path.splitext(filename)[1].lower()
+    random_str = uuid.uuid4().hex[:8]
+    new_filename = f"user_{instance.id}_{random_str}{ext}"
+    return os.path.join('avatars', new_filename)
 
 
 class User(AbstractUser):
@@ -10,6 +28,7 @@ class User(AbstractUser):
     name = models.CharField(max_length=150, verbose_name="姓名")
     phone = models.CharField(max_length=100, verbose_name="手机号", blank=True, null=True)
     role = models.CharField(max_length=100, verbose_name="角色", blank=True, null=True)
+    avatar = models.ImageField(upload_to=user_avatar_path, verbose_name="头像", blank=True, null=True)
     signature = models.TextField(verbose_name="个性签名", blank=True, null=True)
 
     USERNAME_FIELD = 'username'
