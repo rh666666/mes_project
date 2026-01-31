@@ -4,7 +4,7 @@
 """
 
 from rest_framework import serializers
-from django.contrib.auth.models import User
+from .models import User as SystemUser
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -13,8 +13,8 @@ class UserSerializer(serializers.ModelSerializer):
     用于序列化用户模型数据，返回用户的基本信息。
     """
     class Meta:
-        model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name']
+        model = SystemUser
+        fields = ['id', 'username', 'email', 'name', 'phone', 'role', 'signature']
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
@@ -22,11 +22,13 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
     用于处理用户创建请求，包含密码字段并确保密码被正确哈希存储。
     """
+    username = serializers.CharField(required=True)
     password = serializers.CharField(write_only=True, required=True)
 
+
     class Meta:
-        model = User
-        fields = ['username', 'email', 'password', 'first_name', 'last_name']
+        model = SystemUser
+        fields = ['username', 'password', 'email', 'name', 'phone', 'role']
 
     def create(self, validated_data):
         """创建新用户
@@ -37,11 +39,12 @@ class UserCreateSerializer(serializers.ModelSerializer):
         Returns:
             User: 创建的用户实例
         """
-        user = User.objects.create_user(
+        user = SystemUser.objects.create_user(
             username=validated_data['username'],
-            email=validated_data.get('email', ''),
             password=validated_data['password'],
-            first_name=validated_data.get('first_name', ''),
-            last_name=validated_data.get('last_name', '')
+            email=validated_data.get('email', ''),
+            name=validated_data.get('name', ''),
+            phone=validated_data.get('phone', ''),
+            role=validated_data.get('role', '')
         )
         return user
