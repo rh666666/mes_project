@@ -1,7 +1,7 @@
 {
   "env": "development",
   "api": {
-    "baseURL": "http://192.168.3.98:8000",
+    "baseURL": "http://localhost:8000",
     "timeout": 10000,
     "retry": 1
   },

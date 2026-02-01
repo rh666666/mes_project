@@ -1,7 +1,7 @@
 {
   "env": "production",
   "api": {
-    "baseURL": "https://api.example.com",
+    "baseURL": "https://api.adoleiiiiii.com",
     "timeout": 15000,
     "retry": 3
   },
