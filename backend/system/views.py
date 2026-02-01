@@ -5,20 +5,18 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout, get_user_model
 from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
-from dj_rest_auth.views import LoginView
-from dj_rest_auth.registration.views import RegisterView
 from rest_framework_simplejwt.tokens import RefreshToken
 from utils import DetailResponse, ErrorResponse
 
 
-class CustomLoginView(LoginView):
-    """自定义登录视图"""
+class LoginView(APIView):
+    """登录视图"""
 
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """用户登录
@@ -31,31 +29,31 @@ class CustomLoginView(LoginView):
         Returns:
             Response: 包含 access_token、refresh_token 和 csrf_token 的响应
         """
-        username = request.data.get('username')
-        password = request.data.get('password')
+        username = request.data.get("username")
+        password = request.data.get("password")
 
         if not username or not password:
-            return ErrorResponse(msg='用户名和密码不能为空', status=status.HTTP_400_BAD_REQUEST)
+            return ErrorResponse(msg="用户名和密码不能为空", status=status.HTTP_400_BAD_REQUEST)
 
         user = authenticate(request, username=username, password=password)
 
         if user is None:
-            return ErrorResponse(msg='用户名或密码错误', status=status.HTTP_401_UNAUTHORIZED)
+            return ErrorResponse(msg="用户名或密码错误", status=status.HTTP_401_UNAUTHORIZED)
 
         login(request, user)
 
         refresh = RefreshToken.for_user(user)
 
         data = {
-            'access': str(refresh.access_token),
-            'refresh': str(refresh),
-            'csrf_token': request.META.get('CSRF_COOKIE'),
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "csrf_token": request.META.get("CSRF_COOKIE"),
         }
         return DetailResponse(data=data)
 
 
-class CustomLogoutView(LoginView):
-    """自定义注销视图"""
+class LogoutView(APIView):
+    """注销视图"""
 
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """用户注销
@@ -68,18 +66,17 @@ class CustomLogoutView(LoginView):
         Returns:
             Response: 注销成功或失败的响应
         """
-        from django.contrib.auth import logout
         try:
             logout(request)
-            return DetailResponse(data=None, msg='退出成功')
+            return DetailResponse(data=None, msg="退出成功")
         except Exception as e:
             return ErrorResponse(msg=str(e), status=status.HTTP_400_BAD_REQUEST)
 
 
-class CustomRegisterView(RegisterView):
-    """自定义注册视图"""
+class RegisterView(APIView):
+    """注册视图"""
 
-    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """用户注册
 
         Args:
@@ -90,30 +87,29 @@ class CustomRegisterView(RegisterView):
         Returns:
             Response: 包含新创建用户信息的响应
         """
-        from django.contrib.auth import get_user_model
         User = get_user_model()
 
-        username = request.data.get('username')
-        email = request.data.get('email')
-        password = request.data.get('password')
-        name = request.data.get('name')
+        username = request.data.get("username")
+        email = request.data.get("email")
+        password = request.data.get("password")
+        name = request.data.get("name")
 
         if not username or not password:
-            return ErrorResponse(msg='用户名和密码不能为空', status=status.HTTP_400_BAD_REQUEST)
+            return ErrorResponse(msg="用户名和密码不能为空", status=status.HTTP_400_BAD_REQUEST)
 
         if User.objects.filter(username=username).exists():
-            return ErrorResponse(msg='用户名已存在', status=status.HTTP_400_BAD_REQUEST)
+            return ErrorResponse(msg="用户名已存在", status=status.HTTP_400_BAD_REQUEST)
 
         if email and User.objects.filter(email=email).exists():
-            return ErrorResponse(msg='邮箱已被注册', status=status.HTTP_400_BAD_REQUEST)
+            return ErrorResponse(msg="邮箱已被注册", status=status.HTTP_400_BAD_REQUEST)
 
         if not name:
-            name = f'用户_{uuid.uuid4().hex[:8]}'
+            name = f"用户_{uuid.uuid4().hex[:8]}"
 
         try:
             user = User.objects.create_user(
                 username=username,
-                email=email or '',
+                email=email or "",
                 password=password,
                 name=name,
             )
@@ -121,11 +117,11 @@ class CustomRegisterView(RegisterView):
             return ErrorResponse(msg=str(e), status=status.HTTP_400_BAD_REQUEST)
 
         data = {
-            'user': {
-                'id': user.id,
-                'username': user.username,
-                'email': user.email,
-                'name': user.name,
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "name": user.name,
             }
         }
         return DetailResponse(data=data)
@@ -149,14 +145,14 @@ class UserProfileView(APIView):
         """
         user = request.user
         data = {
-            'id': user.id,
-            'username': user.username,
-            'name': user.name,
-            'email': user.email,
-            'phone': user.phone,
-            'avatar': user.avatar.url if user.avatar else None,
-            'role': user.role,
-            'signature': user.signature,
+            "id": user.id,
+            "username": user.username,
+            "name": user.name,
+            "email": user.email,
+            "phone": user.phone,
+            "avatar": user.avatar.url if user.avatar else None,
+            "role": user.role,
+            "signature": user.signature,
         }
         return DetailResponse(data=data)
 
@@ -171,23 +167,22 @@ class UserProfileView(APIView):
         Returns:
             Response: 更新后的用户信息或错误响应
         """
-        from django.contrib.auth import get_user_model
         User = get_user_model()
 
         user = request.user
         data = request.data
 
-        name = data.get('name')
-        email = data.get('email')
-        phone = data.get('phone')
-        signature = data.get('signature')
+        name = data.get("name")
+        email = data.get("email")
+        phone = data.get("phone")
+        signature = data.get("signature")
 
         if name is None or email is None or phone is None:
-            return ErrorResponse(msg='name、email 和 phone 字段都必须提供', status=status.HTTP_400_BAD_REQUEST)
+            return ErrorResponse(msg="name、email 和 phone 字段都必须提供", status=status.HTTP_400_BAD_REQUEST)
 
         if email != user.email:
             if User.objects.filter(email=email).exclude(id=user.id).exists():
-                return ErrorResponse(msg='邮箱已被其他用户使用', status=status.HTTP_400_BAD_REQUEST)
+                return ErrorResponse(msg="邮箱已被其他用户使用", status=status.HTTP_400_BAD_REQUEST)
 
         user.name = name
         user.email = email
@@ -202,14 +197,14 @@ class UserProfileView(APIView):
             return ErrorResponse(msg=str(e), status=status.HTTP_400_BAD_REQUEST)
 
         data = {
-            'id': user.id,
-            'username': user.username,
-            'name': user.name,
-            'email': user.email,
-            'phone': user.phone,
-            'avatar': user.avatar.url if user.avatar else None,
-            'role': user.role,
-            'signature': user.signature,
+            "id": user.id,
+            "username": user.username,
+            "name": user.name,
+            "email": user.email,
+            "phone": user.phone,
+            "avatar": user.avatar.url if user.avatar else None,
+            "role": user.role,
+            "signature": user.signature,
         }
         return DetailResponse(data=data)
 
@@ -231,10 +226,10 @@ class UserAvatarView(APIView):
             Response: 包含更新后用户信息的响应
         """
         user = request.user
-        avatar = request.FILES.get('avatar')
+        avatar = request.FILES.get("avatar")
 
         if not avatar:
-            return ErrorResponse(msg='请上传头像文件', status=status.HTTP_400_BAD_REQUEST)
+            return ErrorResponse(msg="请上传头像文件", status=status.HTTP_400_BAD_REQUEST)
 
         user.avatar = avatar
 
@@ -244,13 +239,13 @@ class UserAvatarView(APIView):
             return ErrorResponse(msg=str(e), status=status.HTTP_400_BAD_REQUEST)
 
         data = {
-            'id': user.id,
-            'username': user.username,
-            'name': user.name,
-            'email': user.email,
-            'phone': user.phone,
-            'avatar': user.avatar.url if user.avatar else None,
-            'role': user.role,
-            'signature': user.signature,
+            "id": user.id,
+            "username": user.username,
+            "name": user.name,
+            "email": user.email,
+            "phone": user.phone,
+            "avatar": user.avatar.url if user.avatar else None,
+            "role": user.role,
+            "signature": user.signature,
         }
         return DetailResponse(data=data)
