@@ -1,80 +1,66 @@
 <template>
-  <view class="bottom-nav-bar">
+  <view class="tab-bar">
     <view 
-      class="nav-item" 
-      v-for="(item, index) in navList" 
+      class="tab-bar-item" 
+      v-for="(item, index) in list" 
       :key="index"
-      :class="{ active: currentPath === item.path }"
-      @click="onNavClick(item)"
+      :class="{ active: selected === index }"
+      @click="switchTab(index, item)"
     >
-      <view class="nav-icon-wrapper">
-        <text class="nav-icon">{{ item.icon }}</text>
+      <view class="tab-icon-wrapper">
+        <text class="tab-icon">{{ item.icon }}</text>
       </view>
-      <text class="nav-text">{{ item.name }}</text>
-      <view class="nav-indicator" v-if="currentPath === item.path"></view>
+      <text class="tab-text">{{ item.text }}</text>
+      <view class="tab-indicator" v-if="selected === index"></view>
     </view>
   </view>
 </template>
 
 <script>
   export default {
-    name: 'BottomNavBar',
-    props: {
-      currentPath: {
-        type: String,
-        default: '/pages/index/index'
-      }
-    },
     data() {
       return {
-        navList: [
+        selected: 0,
+        list: [
           {
-            name: '首页',
-            path: '/pages/index/index',
+            pagePath: '/pages/index/index',
+            text: '首页',
             icon: '首'
           },
           {
-            name: '生产',
-            path: '/pages/production/index',
+            pagePath: '/pages/production/index',
+            text: '生产',
             icon: '产'
           },
           {
-            name: '设备',
-            path: '/pages/equipment/index',
+            pagePath: '/pages/equipment/index',
+            text: '设备',
             icon: '设'
           },
           {
-            name: '我的',
-            path: '/pages/profile/index',
+            pagePath: '/pages/profile/index',
+            text: '我的',
             icon: '我'
           }
         ]
       };
     },
     methods: {
-      onNavClick(item) {
-        if (this.currentPath === item.path) {
+      switchTab(index, item) {
+        if (this.selected === index) {
           return;
         }
-        this.$emit('nav-change', item);
-        // 使用 reLaunch 切换页面，避免页面堆叠
-        uni.reLaunch({
-          url: item.path,
-          fail: (err) => {
-            console.log('页面跳转失败:', err);
-            uni.showToast({
-              title: `${item.name}功能开发中`,
-              icon: 'none'
-            });
-          }
+        this.selected = index;
+        uni.switchTab({
+          url: item.pagePath
         });
       }
     }
   };
 </script>
 
-<style lang="scss" scoped>
-  .bottom-nav-bar {
+<style lang="scss">
+  .tab-bar {
     position: fixed;
     bottom: 0;
     left: 0;
@@ -90,7 +76,7 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
 
-  .nav-item {
+  .tab-bar-item {
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -106,27 +92,27 @@
     }
 
     &.active {
-      .nav-icon {
+      .tab-icon {
         transform: translateY(-4rpx);
         color: $uni-md-color-primary;
         opacity: 1;
       }
 
-      .nav-text {
+      .tab-text {
         color: $uni-md-color-primary;
         font-weight: 500;
       }
     }
   }
 
-  .nav-icon-wrapper {
+  .tab-icon-wrapper {
     margin-bottom: 4rpx;
     display: flex;
     align-items: center;
     justify-content: center;
   }
 
-  .nav-icon {
+  .tab-icon {
     font-size: 40rpx;
     line-height: 1;
     opacity: 0.6;
@@ -134,13 +120,13 @@
     color: $uni-md-text-secondary;
   }
 
-  .nav-text {
+  .tab-text {
     font-size: 22rpx;
     color: $uni-md-text-secondary;
     transition: all $uni-md-animation-normal ease;
   }
 
-  .nav-indicator {
+  .tab-indicator {
     position: absolute;
     top: 0;
     left: 50%;

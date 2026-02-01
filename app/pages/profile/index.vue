@@ -24,24 +24,20 @@
       <!-- 功能菜单 -->
       <MenuList :menu-items="menuItems" @item-click="onMenuClick" />
     </view>
-    <BottomNavBar :current-path="currentPath" @nav-change="onNavChange"></BottomNavBar>
   </view>
 </template>
 
 <script>
-  import BottomNavBar from '@/components/BottomNavBar.vue';
   import MenuList from '@/components/MenuList.vue';
   import authApi from '@/api/auth.js';
   import { getStorageKey, getApiBaseURL } from '@/config/index.js';
 
   export default {
     components: {
-      BottomNavBar,
       MenuList
     },
     data() {
       return {
-        currentPath: '/pages/profile/index',
         isLoggedIn: false,
         userInfo: {}
       };
@@ -74,9 +70,6 @@
       this.checkLoginStatus();
     },
     methods: {
-      onNavChange(item) {
-        console.log('导航切换到:', item);
-      },
       async checkLoginStatus() {
         const token = uni.getStorageSync(getStorageKey('access_token'));
         let userInfo = uni.getStorageSync(getStorageKey('user_info'));
@@ -185,7 +178,6 @@
     flex-direction: column;
     min-height: 100vh;
     background-color: $uni-md-background;
-    padding-bottom: calc(100rpx + env(safe-area-inset-bottom));
     box-sizing: border-box;
   }
 

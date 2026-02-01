@@ -49,5 +49,26 @@
 		"navigationBarBackgroundColor": "#F8F8F8",
 		"backgroundColor": "#F8F8F8"
 	},
+	"tabBar": {
+		"custom": true,
+		"list": [
+			{
+				"pagePath": "pages/index/index",
+				"text": "首页"
+			},
+			{
+				"pagePath": "pages/production/index",
+				"text": "生产"
+			},
+			{
+				"pagePath": "pages/equipment/index",
+				"text": "设备"
+			},
+			{
+				"pagePath": "pages/profile/index",
+				"text": "我的"
+			}
+		]
+	},
 	"uniIdRouter": {}
 }
