@@ -23,23 +23,42 @@
 
       <!-- 功能菜单 -->
       <MenuList :menu-items="menuItems" @item-click="onMenuClick" />
+
+      <!-- 退出登录菜单 -->
+      <view v-if="isLoggedIn" class="logout-section">
+        <MenuList :menu-items="logoutMenuItems" @item-click="onLogoutMenuClick" />
+      </view>
     </view>
+
+    <!-- 退出登录确认弹窗 -->
+    <MaterialDialog
+      :visible="logoutDialogVisible"
+      title="提示"
+      content="确定要退出登录吗？"
+      confirm-text="确定"
+      cancel-text="取消"
+      @confirm="onLogoutConfirm"
+      @cancel="onLogoutCancel"
+    />
   </view>
 </template>
 
 <script>
   import MenuList from '@/components/MenuList.vue';
+  import MaterialDialog from '@/components/MaterialDialog.vue';
   import authApi from '@/api/auth.js';
   import { getStorageKey, getApiBaseURL } from '@/config/index.js';
 
   export default {
     components: {
-      MenuList
+      MenuList,
+      MaterialDialog
     },
     data() {
       return {
         isLoggedIn: false,
-        userInfo: {}
+        userInfo: {},
+        logoutDialogVisible: false
       };
     },
     computed: {
@@ -48,14 +67,12 @@
           { text: '设置', key: 'settings' },
           { text: '关于', key: 'about' }
         ];
-        if (this.isLoggedIn) {
-          items.push({
-            text: '退出登录',
-            key: 'logout',
-            textClass: 'danger'
-          });
-        }
         return items;
+      },
+      logoutMenuItems() {
+        return [
+          { text: '退出登录', key: 'logout', textClass: 'danger' }
+        ];
       },
       displayName() {
         if (!this.isLoggedIn) return '未登录';
@@ -123,37 +140,38 @@
           case 'about':
             this.onAbout();
             break;
-          case 'logout':
-            this.onLogout();
-            break;
         }
       },
-      async onLogout() {
-        uni.showModal({
-          title: '提示',
-          content: '确定要退出登录吗？',
-          success: async (res) => {
-            if (res.confirm) {
-              try {
-                await authApi.logout();
-              } catch (error) {
-                console.error('注销请求失败:', error);
-              }
+      onLogoutMenuClick(item) {
+        if (item.key === 'logout') {
+          this.logoutDialogVisible = true;
+        }
+      },
+      onLogoutConfirm() {
+        this.logoutDialogVisible = false;
+        this.performLogout();
+      },
+      onLogoutCancel() {
+        this.logoutDialogVisible = false;
+      },
+      async performLogout() {
+        try {
+          await authApi.logout();
+        } catch (error) {
+          console.error('注销请求失败:', error);
+        }
 
-              uni.removeStorageSync(getStorageKey('access_token'));
-              uni.removeStorageSync(getStorageKey('refresh_token'));
-              uni.removeStorageSync(getStorageKey('csrf_token'));
-              uni.removeStorageSync(getStorageKey('user_info'));
+        uni.removeStorageSync(getStorageKey('access_token'));
+        uni.removeStorageSync(getStorageKey('refresh_token'));
+        uni.removeStorageSync(getStorageKey('csrf_token'));
+        uni.removeStorageSync(getStorageKey('user_info'));
 
-              this.isLoggedIn = false;
-              this.userInfo = {};
+        this.isLoggedIn = false;
+        this.userInfo = {};
 
-              uni.showToast({
-                title: '已退出登录',
-                icon: 'success'
-              });
-            }
-          }
+        uni.showToast({
+          title: '已退出登录',
+          icon: 'success'
         });
       },
       onSettings() {
@@ -246,5 +264,13 @@
   .arrow-icon {
     font-size: $uni-font-size-lg;
     color: $uni-md-text-tertiary;
+  }
+
+  .logout-section {
+    margin-top: $uni-md-space-xl;
+
+    :deep(.menu-list) {
+      width: 100%;
+    }
   }
 </style>

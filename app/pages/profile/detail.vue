@@ -10,7 +10,7 @@
           mode="aspectFill"
         />
         <view v-else class="avatar-placeholder">
-          <text class="avatar-text">{{ profile.username ? profile.username.charAt(0).toUpperCase() : '用' }}</text>
+          <text class="avatar-text">{{ profile.name ? profile.name.charAt(0).toUpperCase() : '用' }}</text>
         </view>
         <text class="avatar-tip">点击更换头像</text>
       </view>
