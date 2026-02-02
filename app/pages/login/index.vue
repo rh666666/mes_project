@@ -53,8 +53,8 @@ export default {
                 id: profileRes.data.id,
                 username: profileRes.data.username,
                 name: profileRes.data.name,
-                avatar: profileRes.data.avatar,
-                signature: profileRes.data.signature
+                avatar: profileRes.data.avatar || '',
+                signature: profileRes.data.signature || ''
               })
             }
           } catch (profileError) {

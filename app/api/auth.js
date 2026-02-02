@@ -31,16 +31,30 @@ import request, { uploadFile } from './request.js'
  */
 
 /**
+ * 注册返回的用户信息
+ * @typedef {Object} RegisterUser
+ * @property {number} id - 用户ID
+ * @property {string} username - 用户名
+ * @property {string} email - 邮箱
+ * @property {string} name - 昵称
+ */
+
+/**
  * 用户信息
  * @typedef {Object} UserProfile
  * @property {number} id - 用户ID
  * @property {string} username - 用户名
  * @property {string} name - 昵称
  * @property {string} email - 邮箱
- * @property {string} phone - 手机号
- * @property {string} avatar - 头像URL
- * @property {string} role - 角色
- * @property {string} signature - 个性签名
+ * @property {string|null} phone - 手机号
+ * @property {string|null} avatar - 头像URL
+ * @property {string|null} role - 角色
+ * @property {string|null} signature - 个性签名
+ * @property {number|null} creator - 创建人
+ * @property {number|null} modifier - 修改人
+ * @property {string|null} create_datetime - 创建时间
+ * @property {string|null} update_datetime - 修改时间
+ * @property {number|null} dept - 数据归属部门
  */
 
 /**
@@ -49,13 +63,33 @@ import request, { uploadFile } from './request.js'
  * @property {string} name - 昵称
  * @property {string} email - 邮箱
  * @property {string} phone - 手机号
- * @property {string} signature - 个性签名
+ * @property {string} [signature] - 个性签名
+ * @property {string|null} [role] - 角色
+ * @property {number|null} [dept] - 数据归属部门ID
  */
 
 /**
  * 更新头像参数
  * @typedef {Object} UpdateAvatarParams
  * @property {string} avatar - 头像文件路径
+ */
+
+/**
+ * Token刷新请求参数
+ * @typedef {Object} TokenRefreshParams
+ * @property {string} refresh - 刷新令牌
+ */
+
+/**
+ * Token刷新响应数据
+ * @typedef {Object} TokenRefreshResponse
+ * @property {string} access - 新的访问令牌
+ */
+
+/**
+ * Token验证请求参数
+ * @typedef {Object} TokenVerifyParams
+ * @property {string} token - 访问令牌
  */
 
 /**
@@ -85,10 +119,10 @@ const authApi = {
   /**
    * 用户注册
    * @param {RegisterParams} data - 注册参数
-   * @returns {Promise<{code: number, msg: string, data: Object}>} 返回注册结果的Promise
+   * @returns {Promise<{code: number, msg: string, data: {user: RegisterUser}}>} 返回注册结果的Promise
    * @example
    * authApi.register({ username: 'test', password: '123456' })
-   *   .then(res => console.log(res.msg))
+   *   .then(res => console.log(res.data.user.id))
    */
   register(data) {
     return request({
@@ -103,7 +137,7 @@ const authApi = {
 
   /**
    * 用户注销
-   * @returns {Promise<{code: number, msg: string}>} 返回注销结果的Promise
+   * @returns {Promise<{code: number, msg: string, data: null}>} 返回注销结果的Promise
    * @example
    * authApi.logout().then(res => console.log(res.msg))
    */
@@ -122,7 +156,7 @@ const authApi = {
    */
   getProfile() {
     return request({
-      url: '/api/auth/profile/',
+      url: '/api/auth/users/me/',
       method: 'GET'
     })
   },
@@ -137,13 +171,15 @@ const authApi = {
    */
   updateUserInfo(data) {
     return request({
-      url: '/api/auth/profile/',
+      url: '/api/auth/users/me/',
       method: 'PUT',
       data: {
-        name: data.name || '',
-        email: data.email || '',
-        phone: data.phone || '',
-        signature: data.signature || ''
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        signature: data.signature,
+        role: data.role,
+        dept: data.dept
       }
     })
   },
@@ -158,9 +194,45 @@ const authApi = {
    */
   updateAvatar(data) {
     return uploadFile({
-      url: '/api/auth/upload_avatar/',
+      url: '/api/auth/users/me/avatar/',
       filePath: data.avatar,
       name: 'avatar'
+    })
+  },
+
+  /**
+   * 刷新访问令牌
+   * @param {TokenRefreshParams} data - 刷新参数
+   * @returns {Promise<TokenRefreshResponse>} 返回新的访问令牌
+   * @example
+   * authApi.refreshToken({ refresh: 'eyJhbGciOiJIUzI1NiIs...' })
+   *   .then(res => console.log(res.access))
+   */
+  refreshToken(data) {
+    return request({
+      url: '/api/auth/token/refresh/',
+      method: 'POST',
+      data: {
+        refresh: data.refresh
+      }
+    })
+  },
+
+  /**
+   * 验证令牌是否有效
+   * @param {TokenVerifyParams} data - 验证参数
+   * @returns {Promise<{}>} 返回验证结果
+   * @example
+   * authApi.verifyToken({ token: 'eyJhbGciOiJIUzI1NiIs...' })
+   *   .then(() => console.log('Token有效'))
+   */
+  verifyToken(data) {
+    return request({
+      url: '/api/auth/token/verify/',
+      method: 'POST',
+      data: {
+        token: data.token
+      }
     })
   }
 }

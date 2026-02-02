@@ -1,7 +1,8 @@
 """用户模型模块"""
 
-import os
 import uuid
+from pathlib import Path
+
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
@@ -16,9 +17,36 @@ class CoreModel(models.Model):
 
     id = models.BigAutoField(primary_key=True, help_text="Id", verbose_name="Id")
     description = models.CharField(max_length=255, verbose_name="描述", null=True, blank=True, help_text="描述")
-    creator = models.ForeignKey(to=settings.AUTH_USER_MODEL, related_query_name="creator_query", null=True, verbose_name="创建人", help_text="创建人", on_delete=models.SET_NULL, db_constraint=False)
-    modifier = models.CharField(max_length=255, null=True, blank=True, help_text="修改人", verbose_name="修改人")
-    dept_belong_id = models.CharField(max_length=255, help_text="数据归属部门", null=True, blank=True, verbose_name="数据归属部门")
+    creator = models.ForeignKey(
+        to=settings.AUTH_USER_MODEL,
+        related_name="%(class)s_creator",
+        related_query_name="%(class)s_creator_query",
+        null=True,
+        verbose_name="创建人",
+        help_text="创建人",
+        on_delete=models.SET_NULL,
+        db_constraint=False,
+    )
+    modifier = models.ForeignKey(
+        to=settings.AUTH_USER_MODEL,
+        related_name="%(class)s_modifier",
+        related_query_name="%(class)s_modifier_query",
+        null=True,
+        verbose_name="修改人",
+        help_text="修改人",
+        on_delete=models.SET_NULL,
+        db_constraint=False,
+    )
+    dept = models.ForeignKey(
+        to="system.Dept",
+        related_name="%(class)s_dept",
+        related_query_name="%(class)s_dept_query",
+        null=True,
+        verbose_name="数据归属部门",
+        help_text="数据归属部门",
+        on_delete=models.SET_NULL,
+        db_constraint=False,
+    )
     update_datetime = models.DateTimeField(auto_now=True, null=True, blank=True, help_text="修改时间", verbose_name="修改时间")
     create_datetime = models.DateTimeField(auto_now_add=True, null=True, blank=True, help_text="创建时间", verbose_name="创建时间")
 
@@ -26,6 +54,28 @@ class CoreModel(models.Model):
         abstract = True
         verbose_name = "核心模型"
         verbose_name_plural = verbose_name
+
+    def save(self, *args, **kwargs):
+        """保存模型时自动更新 creator、modifier 和 update_datetime
+
+        通过线程本地存储自动获取当前请求用户，无需手动传入。
+        """
+        from django.utils import timezone
+
+        from utils.current_user import get_current_user
+
+        current_user = get_current_user()
+
+        if current_user and current_user.is_authenticated:
+            if self._state.adding:
+                # 创建时设置 creator
+                self.creator = current_user
+            else:
+                # 更新时设置 modifier
+                self.modifier = current_user
+                self.update_datetime = timezone.now()
+
+        super().save(*args, **kwargs)
 
 
 def user_avatar_path(instance, filename):
@@ -38,18 +88,25 @@ def user_avatar_path(instance, filename):
     Returns:
         str: 文件路径，格式为 avatars/user_{id}_{random}.{ext}
     """
-    ext = os.path.splitext(filename)[1].lower()
+    filepath = Path(filename)
+    ext = filepath.suffix.lower()
     random_str = uuid.uuid4().hex[:8]
     new_filename = f"user_{instance.id}_{random_str}{ext}"
-    return os.path.join("avatars", new_filename)
+    return str(Path("avatars") / new_filename)
 
 
 class User(AbstractUser, CoreModel):
     """用户模型 - 扩展Django内置用户模型"""
 
+    class Role(models.TextChoices):
+        """用户角色"""
+
+        ADMIN = "admin", "管理员"
+        USER = "user", "普通用户"
+
     name = models.CharField(max_length=150, verbose_name="姓名")
     phone = models.CharField(max_length=100, verbose_name="手机号", blank=True, null=True)
-    role = models.CharField(max_length=100, verbose_name="角色", blank=True, null=True)
+    role = models.CharField(max_length=100, verbose_name="角色", blank=True, null=True, choices=Role.choices, default=Role.USER)
     avatar = models.ImageField(upload_to=user_avatar_path, verbose_name="头像", blank=True, null=True)
     signature = models.TextField(verbose_name="个性签名", blank=True, null=True)
 
@@ -74,7 +131,7 @@ class Dept(CoreModel):
 
     code = models.CharField(max_length=100, verbose_name="部门编码", unique=True)
     name = models.CharField(max_length=100, verbose_name="部门名称")
-    parent = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True, verbose_name="父级部门")
+    parent = models.ForeignKey("self", related_name="children", on_delete=models.SET_NULL, null=True, blank=True, verbose_name="父级部门")
 
     class Meta:
         verbose_name = "部门"

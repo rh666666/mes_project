@@ -101,8 +101,8 @@
                 id: res.data.id,
                 username: res.data.username,
                 name: res.data.name,
-                avatar: res.data.avatar,
-                signature: res.data.signature
+                avatar: res.data.avatar || '',
+                signature: res.data.signature || ''
               };
               uni.setStorageSync(getStorageKey('user_info'), userInfo);
             }

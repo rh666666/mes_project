@@ -8,6 +8,7 @@ dependencies = [
     "django>=6.0.1",
     "djangorestframework>=3.16.1",
     "djangorestframework-simplejwt>=5.5.1",
+    "drf-spectacular>=0.29.0",
     "httptools>=0.7.1",
     "pillow>=12.1.0",
     "python-dotenv>=1.2.1",
@@ -17,12 +18,71 @@ dependencies = [
 
 [tool.ruff]
 line-length = 200
+exclude = [
+    "**/migrations/*.py",
+    ".venv",
+    ".eggs",
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+]
 
 [tool.ruff.lint]
-extend-select = ["F401", "E501"]
+select = [
+    "F",   # pyflakes
+    "E",   # pycodestyle
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "RUF", # ruff
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "ISC", # flake8-implicit-str-concat
+    "PIE", # flake8-pie
+    "PT",  # flake-pytest-style
+    "PTH", # flake8-use-pathlib
+    "PD",  # pandas-vet
+    "SIM", # flake8-simplify
+    "TID", # flake8-tidy-imports
+]
+extend-ignore = ["RUF012", "E501", "RUF001", "RUF002", "RUF003", "SIM105", "N806"]
+[tool.ruff.lint.per-file-ignores]
+"**/migrations/**.py" = ["D100", "D101", "D102", "D103", "E501", "RUF012"]
+"**/tests/**/*.py" = [
+    "S101",
+    "E501",
+    "PLR0917",
+    "ISC001",
+    "D100",
+    "D101",
+    "D102",
+    "PLR0913",
+    "PLR2004",
+]
+"**/*serializer*.py" = ["N815"]
+"**/views.py" = ["N815"]
+"**/__init__.py" = ["D104"]
+"**/models.py" = ["COM819"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["haztrak"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["ninja.Query", "ninja.Depends", "ninja.File"]
+
+[tool.ruff.lint.pep8-naming]
+classmethod-decorators = ["pydantic.validator", "pydantic.root_validator"]
 
 [tool.ruff.format]
 indent-style = "space"

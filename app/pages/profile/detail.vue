@@ -178,15 +178,15 @@ export default {
         const res = await authApi.updateAvatar({ avatar: filePath })
         
         if (res.code === 2000) {
-          this.profile.avatar = res.data.avatar
+          this.profile.avatar = res.data.avatar || ''
           uni.showToast({
             title: '头像更新成功',
             icon: 'success'
           })
-          
+
           // 更新本地存储
           const userInfo = uni.getStorageSync(getStorageKey('user_info')) || {}
-          userInfo.avatar = res.data.avatar
+          userInfo.avatar = res.data.avatar || ''
           uni.setStorageSync(getStorageKey('user_info'), userInfo)
         } else {
           uni.showToast({
