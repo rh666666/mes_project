@@ -3,10 +3,11 @@
  * @module api/request
  */
 
-import config, { getStorageKey, isDebug } from '@/config/index.js'
+import config, { getStorageKey, getCsrfOrigin, isDebug } from '@/config/index.js'
 
 const BASE_URL = config.api.baseURL
 const TIMEOUT = config.api.timeout
+const CSRF_ORIGIN = config.api.csrfOrigin
 
 /**
  * 请求配置选项
@@ -37,6 +38,11 @@ const getHeaders = (customHeader = {}) => {
 
   if (csrfToken) {
     header['X-CSRFToken'] = csrfToken
+  }
+
+  // 添加Origin头用于CSRF验证
+  if (CSRF_ORIGIN) {
+    header['Origin'] = CSRF_ORIGIN
   }
 
   return header
@@ -75,11 +81,17 @@ const request = (options) => {
           console.log(`[Response] ${options.url}`, res.data)
         }
 
-        if (res.statusCode >= 200 && res.statusCode < 300) {
+        // 检查是否为token无效 (HTTP 403 且 code 为 token_not_valid)
+        const isTokenInvalid = res.statusCode === 403 &&
+          res.data && res.data.code === 'token_not_valid'
+
+        if (res.statusCode >= 200 && res.statusCode < 300 && !isTokenInvalid) {
           resolve(res.data)
-        } else if (res.statusCode === 401) {
+        } else if (res.statusCode === 401 || isTokenInvalid) {
+          // 401: 未授权, token_not_valid: token无效
           uni.removeStorageSync(getStorageKey('access_token'))
           uni.removeStorageSync(getStorageKey('refresh_token'))
+          uni.removeStorageSync(getStorageKey('csrf_token'))
           uni.removeStorageSync(getStorageKey('user_info'))
           uni.showToast({
             title: '登录已过期，请重新登录',
@@ -156,11 +168,17 @@ const uploadFile = (options) => {
           console.log(`[Upload Response] ${options.url}`, data)
         }
 
-        if (res.statusCode >= 200 && res.statusCode < 300) {
+        // 检查是否为token无效 (HTTP 403 且 code 为 token_not_valid)
+        const isTokenInvalid = res.statusCode === 403 &&
+          data && data.code === 'token_not_valid'
+
+        if (res.statusCode >= 200 && res.statusCode < 300 && !isTokenInvalid) {
           resolve(data)
-        } else if (res.statusCode === 401) {
+        } else if (res.statusCode === 401 || isTokenInvalid) {
+          // 401: 未授权, token_not_valid: token无效
           uni.removeStorageSync(getStorageKey('access_token'))
           uni.removeStorageSync(getStorageKey('refresh_token'))
+          uni.removeStorageSync(getStorageKey('csrf_token'))
           uni.removeStorageSync(getStorageKey('user_info'))
           uni.showToast({
             title: '登录已过期，请重新登录',

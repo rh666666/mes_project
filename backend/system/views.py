@@ -224,28 +224,17 @@ class UserViewSet(viewsets.ViewSet):
     @extend_schema(
         summary="获取用户信息",
         description="获取当前登录用户的详细信息",
+        methods=["GET"],
         responses={
             200: OpenApiResponse(response=UserProfileResponseSerializer, description="获取成功"),
             401: OpenApiResponse(response=ErrorResponseSerializer, description="未认证"),
         },
         tags=["用户"],
     )
-    @action(detail=False, methods=["get"], url_path="me")
-    def me(self, request: Request) -> Response:
-        """获取当前用户信息
-
-        Args:
-            request: 认证后的请求对象
-
-        Returns:
-            Response: 包含用户详细信息的响应
-        """
-        user = request.user
-        return DetailResponse(data=UserSerializer(user).data)
-
     @extend_schema(
         summary="更新用户信息",
         description="更新当前登录用户的基本信息（昵称、邮箱、手机号、个性签名）",
+        methods=["PUT"],
         request=UserProfileUpdateRequestSerializer,
         responses={
             200: OpenApiResponse(response=UserProfileUpdateResponseSerializer, description="更新成功"),
@@ -255,22 +244,24 @@ class UserViewSet(viewsets.ViewSet):
         tags=["用户"],
     )
     @transaction.atomic
-    @action(detail=False, methods=["put"], url_path="me")
-    def update_me(self, request: Request) -> Response:
-        """更新用户基本信息（昵称、邮箱、手机号、个性签名）
-
-        普通用户只能修改自己的基本信息，无法修改 role 和 dept 字段。
+    @action(detail=False, methods=["get", "put"], url_path="me")
+    def me(self, request: Request) -> Response:
+        """获取或更新当前用户信息
 
         Args:
-            request: 包含 name、email、phone 和可选 signature 的更新请求
+            request: 认证后的请求对象
 
         Returns:
-            Response: 更新后的用户信息或错误响应
+            Response: 包含用户详细信息的响应
         """
-        User = get_user_model()
-
         user = request.user
+
+        if request.method == "GET":
+            return DetailResponse(data=UserSerializer(user).data)
+
+        # PUT 请求处理更新
         data = request.data
+        User = get_user_model()
 
         # 普通用户只能修改基本信息，不允许修改 role 和 dept
         name = data.get("name")
