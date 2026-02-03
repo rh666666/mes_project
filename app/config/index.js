@@ -46,6 +46,16 @@ export const getConfig = () => config
 export const getApiBaseURL = () => config.api.baseURL
 
 /**
+ * 获取CSRF Origin
+ * @returns {string} CSRF Origin地址
+ * @example
+ * const csrfOrigin = getCsrfOrigin()
+ * // 开发环境: http://localhost:8000
+ * // 生产环境: https://api.example.com
+ */
+export const getCsrfOrigin = () => config.api.csrfOrigin
+
+/**
  * 获取带前缀的存储键
  * @param {string} key - 原始键名
  * @returns {string} 带前缀的存储键

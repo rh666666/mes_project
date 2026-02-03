@@ -6,14 +6,30 @@
         <view class="section-header">
           <text class="section-title">管理员功能</text>
         </view>
-        <MenuList :menu-items="adminMenuItems" @item-click="onMenuClick" />
+        <List class="menu-list-wrapper">
+          <ListItem
+            v-for="(item, index) in adminMenuItems"
+            :key="index"
+            :clickable="true"
+            :has-divider="index < adminMenuItems.length - 1"
+            @click="onMenuClick(item)"
+          >
+            <template #headline>
+              <text class="menu-text">{{ item.text }}</text>
+            </template>
+            <template #end>
+              <text class="menu-arrow">></text>
+            </template>
+          </ListItem>
+        </List>
       </view>
     </view>
   </view>
 </template>
 
 <script>
-import MenuList from '@/components/MenuList.vue';
+import List from '@/components/ui/md3/List.vue';
+import ListItem from '@/components/ui/md3/ListItem.vue';
 import { getStorageKey } from '@/config/index.js';
 
 /**
@@ -22,7 +38,8 @@ import { getStorageKey } from '@/config/index.js';
  */
 export default {
   components: {
-    MenuList
+    List,
+    ListItem
   },
 
   data() {
@@ -110,8 +127,22 @@ export default {
 }
 
 .section-title {
-  font-size: $uni-font-size-lg;
-  font-weight: 600;
-  color: $uni-md-text-primary;
-}
+    font-size: $uni-font-size-lg;
+    font-weight: 600;
+    color: $uni-md-text-primary;
+  }
+
+  .menu-list-wrapper {
+    margin-bottom: $uni-md-space-lg;
+  }
+
+  .menu-text {
+    font-size: $uni-font-size-base;
+    color: $uni-md-text-primary;
+  }
+
+  .menu-arrow {
+    font-size: $uni-font-size-base;
+    color: $uni-md-text-tertiary;
+  }
 </style>

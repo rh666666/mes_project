@@ -64,50 +64,74 @@
     <!-- 编辑用户弹窗 -->
     <Dialog
       :visible="editDialogVisible"
-      :title="`编辑用户 - ${editingUser?.name || editingUser?.username}`"
-      confirm-text="保存"
-      cancel-text="取消"
+      type="alert"
       @confirm="onSaveUser"
       @cancel="onCancelEdit"
     >
+      <!-- headline slot: 标题 -->
+      <template #headline>
+        <text class="dialog-headline">编辑用户</text>
+      </template>
+
+      <!-- content slot: 表单内容 -->
       <template #content>
-        <view class="edit-form">
-          <view class="form-item">
-            <text class="form-label">用户名</text>
-            <text class="form-value readonly">{{ editingUser?.username }}</text>
-          </view>
-          <view class="form-item">
-            <text class="form-label">昵称</text>
-            <text class="form-value readonly">{{ editingUser?.name || '未设置' }}</text>
-          </view>
-          <view class="form-item">
-            <text class="form-label">角色</text>
-            <view class="role-selector">
-              <view
-                class="role-option"
-                :class="{ active: editForm.role === 'admin' }"
-                @click="editForm.role = 'admin'"
-              >
-                <text class="role-option-text">管理员</text>
-              </view>
-              <view
-                class="role-option"
-                :class="{ active: editForm.role === 'user' }"
-                @click="editForm.role = 'user'"
-              >
-                <text class="role-option-text">普通用户</text>
-              </view>
+        <form id="edit-user-form" method="dialog" class="edit-form">
+          <!-- 用户信息展示（只读） -->
+          <view class="readonly-section">
+            <view class="readonly-row">
+              <text class="readonly-label">用户名</text>
+              <text class="readonly-value">{{ editingUser?.username }}</text>
+            </view>
+            <view class="readonly-row">
+              <text class="readonly-label">昵称</text>
+              <text class="readonly-value">{{ editingUser?.name || '未设置' }}</text>
             </view>
           </view>
-          <view class="form-item">
-            <text class="form-label">部门ID</text>
-            <input
-              class="form-input"
-              v-model="editForm.dept"
-              type="number"
-              placeholder="请输入部门ID"
-            />
+
+          <!-- 角色选择 -->
+          <view class="form-field">
+            <text class="field-label">角色</text>
+            <view class="chip-set" role="group" aria-label="选择用户角色">
+              <Chip
+                type="filter"
+                label="管理员"
+                icon="admin_panel_settings"
+                :selected="editForm.role === 'admin'"
+                @click="editForm.role = 'admin'"
+              />
+              <Chip
+                type="filter"
+                label="普通用户"
+                icon="person_outline"
+                :selected="editForm.role === 'user'"
+                @click="editForm.role = 'user'"
+              />
+            </view>
           </view>
+
+          <!-- 部门ID输入 -->
+          <view class="form-field">
+            <text class="field-label">部门ID</text>
+            <view class="input-wrapper">
+              <MdIcon type="apartment" :size="36" color="#8E8E93" class="input-icon" />
+              <input
+                class="form-input with-icon"
+                v-model="editForm.dept"
+                type="number"
+                placeholder="请输入部门ID"
+              />
+            </view>
+          </view>
+        </form>
+      </template>
+
+      <!-- actions slot: 操作按钮 -->
+      <template #actions>
+        <view class="dialog-action-btn" @click="onCancelEdit">
+          <text class="dialog-action-btn-text">取消</text>
+        </view>
+        <view class="dialog-action-btn dialog-action-btn--confirm" @click="onSaveUser">
+          <text class="dialog-action-btn-text dialog-action-btn-text--confirm">保存</text>
         </view>
       </template>
     </Dialog>
@@ -132,8 +156,8 @@ import authApi from '@/api/auth.js'
 import MdIcon from '@/components/ui/MdIcon.vue'
 import List from '@/components/ui/md3/List.vue'
 import ListItem from '@/components/ui/md3/ListItem.vue'
-import Divider from '@/components/ui/md3/Divider.vue'
 import Dialog from '@/components/ui/md3/Dialog.vue'
+import Chip from '@/components/ui/md3/Chip.vue'
 import { getApiBaseURL } from '@/config/index.js'
 
 /**
@@ -148,8 +172,8 @@ export default {
     MdIcon,
     List,
     ListItem,
-    Divider,
-    Dialog
+    Dialog,
+    Chip
   },
 
   data() {
@@ -499,13 +523,49 @@ export default {
   color: $uni-md-text-secondary;
 }
 
-.edit-form {
-  padding: $uni-md-space-md 0;
+.dialog-headline {
+  font-size: $uni-font-size-lg;
+  font-weight: 500;
+  color: $uni-md-text-primary;
 }
 
-.form-item {
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: $uni-md-space-lg;
+}
+
+/* 只读区域样式 - 简洁行内展示 */
+.readonly-section {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: $uni-md-space-md;
+  border-bottom: 1px solid $uni-md-divider;
+  margin-bottom: $uni-md-space-md;
+}
+
+.readonly-row {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  padding: $uni-md-space-xs 0;
+}
+
+.readonly-label {
+  font-size: $uni-font-size-sm;
+  color: $uni-md-text-secondary;
+}
+
+.readonly-value {
+  font-size: $uni-font-size-sm;
+  color: $uni-md-text-primary;
+  font-weight: 500;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: $uni-md-space-sm;
   margin-bottom: $uni-md-space-md;
 
   &:last-child {
@@ -513,59 +573,70 @@ export default {
   }
 }
 
-.form-label {
-  width: 140rpx;
-  font-size: $uni-font-size-base;
-  color: $uni-md-text-primary;
+.field-label {
+  font-size: $uni-font-size-sm;
   font-weight: 500;
+  color: $uni-md-text-primary;
 }
 
-.form-value {
-  flex: 1;
-  font-size: $uni-font-size-base;
-  color: $uni-md-text-primary;
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
 
-  &.readonly {
-    color: $uni-md-text-secondary;
-  }
+.input-icon {
+  position: absolute;
+  left: $uni-md-space-md;
+  z-index: 1;
 }
 
 .form-input {
-  flex: 1;
-  height: 72rpx;
+  width: 100%;
+  height: 88rpx;
   padding: 0 $uni-md-space-md;
-  background-color: $uni-md-surface-variant;
-  border-radius: $uni-md-radius-small;
+  background-color: $uni-md-surface;
+  border: 1px solid $uni-md-border;
+  border-radius: $uni-md-radius-medium;
   font-size: $uni-font-size-base;
   color: $uni-md-text-primary;
-}
+  box-sizing: border-box;
+  transition: border-color $uni-md-animation-fast ease;
 
-.role-selector {
-  flex: 1;
-  display: flex;
-  gap: $uni-md-space-md;
-}
+  &.with-icon {
+    padding-left: 80rpx;
+  }
 
-.role-option {
-  flex: 1;
-  padding: $uni-md-space-sm $uni-md-space-md;
-  background-color: $uni-md-surface-variant;
-  border-radius: $uni-md-radius-small;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all $uni-md-animation-fast ease;
-
-  &.active {
-    background-color: $uni-md-color-primary;
-
-    .role-option-text {
-      color: white;
-    }
+  &:focus {
+    border-color: $uni-md-color-primary;
+    outline: none;
   }
 }
 
-.role-option-text {
+.chip-set {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $uni-md-space-sm;
+}
+
+.dialog-action-btn {
+  padding: $uni-md-space-sm $uni-md-space-md;
+  border-radius: $uni-md-radius-small;
+  transition: background-color $uni-md-animation-fast ease;
+
+  &:active {
+    background-color: rgba($uni-md-color-primary, 0.1);
+  }
+}
+
+.dialog-action-btn--confirm {
+  .dialog-action-btn-text--confirm {
+    color: $uni-md-color-primary;
+    font-weight: 500;
+  }
+}
+
+.dialog-action-btn-text {
   font-size: $uni-font-size-base;
   color: $uni-md-text-secondary;
 }

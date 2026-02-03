@@ -18,18 +18,11 @@
     >
       <!-- 选中图标 -->
       <view v-if="modelValue && !indeterminate" class="md3-checkbox__icon">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path
-            d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"
-            fill="currentColor"
-          />
-        </svg>
+        <MdIcon type="check" :size="20" color="#FFFFFF" />
       </view>
       <!-- 不确定状态图标 -->
       <view v-if="indeterminate" class="md3-checkbox__icon md3-checkbox__icon--indeterminate">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="5" y="11" width="14" height="2" fill="currentColor" />
-        </svg>
+        <MdIcon type="check_indeterminate_small" :size="20" color="#FFFFFF" />
       </view>
     </view>
 
@@ -53,8 +46,15 @@
  * @component
  * @description 遵循 MD3 规范的复选框组件
  */
+
+import MdIcon from '@/components/ui/MdIcon.vue'
+
 export default {
   name: 'Checkbox',
+
+  components: {
+    MdIcon
+  },
 
   props: {
     /** @type {boolean} 是否选中 */

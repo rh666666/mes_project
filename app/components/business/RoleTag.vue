@@ -1,19 +1,19 @@
 <template>
-  <view class="role-tag" :class="[`role-${role}`, `size-${size}`]">
-    <text class="role-text">{{ displayText }}</text>
-  </view>
+  <Tag :text="displayText" :variant="variant" :size="size" />
 </template>
 
 <script setup lang="ts">
 /**
  * 角色标签组件
  * 用于展示用户角色，如管理员、普通用户等
+ * 基于 Tag 组件封装
  */
 
 import { computed } from 'vue'
+import Tag from '@/components/ui/Tag.vue'
 
 type UserRole = 'admin' | 'user' | 'vip' | 'guest' | string
-type TagSize = 'small' | 'medium'
+type TagSize = 'small' | 'medium' | 'large'
 
 interface Props {
   /** 角色类型 */
@@ -48,48 +48,17 @@ const displayText = computed(() => {
   }
   return roleTextMap[props.role] || props.role
 })
+
+/**
+ * 角色对应的标签变体
+ */
+const variant = computed(() => {
+  const variantMap: Record<string, string> = {
+    admin: 'error',
+    user: 'primary',
+    vip: 'warning',
+    guest: 'default'
+  }
+  return variantMap[props.role] || 'default'
+})
 </script>
-
-<style lang="scss" scoped>
-.role-tag {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: $uni-md-radius-small;
-  font-weight: 500;
-
-  &.size-small {
-    padding: 2rpx 10rpx;
-    font-size: 20rpx;
-  }
-
-  &.size-medium {
-    padding: 4rpx 16rpx;
-    font-size: $uni-font-size-sm;
-  }
-
-  &.role-admin {
-    background-color: rgba($uni-color-error, 0.1);
-    color: $uni-color-error;
-  }
-
-  &.role-user {
-    background-color: rgba($uni-md-color-primary, 0.1);
-    color: $uni-md-color-primary;
-  }
-
-  &.role-vip {
-    background-color: rgba($uni-color-warning, 0.1);
-    color: $uni-color-warning;
-  }
-
-  &.role-guest {
-    background-color: $uni-md-surface-variant;
-    color: $uni-md-text-secondary;
-  }
-}
-
-.role-text {
-  line-height: 1;
-}
-</style>
