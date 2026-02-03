@@ -61,7 +61,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:5173').split(',')
+CSRF_TRUSTED_ORIGINS = [os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:5173')]
 
 ROOT_URLCONF = 'application.urls'
 
