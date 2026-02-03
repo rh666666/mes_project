@@ -41,6 +41,12 @@
 			"style": {
 				"navigationBarTitleText": "注册"
 			}
+		},
+		{
+			"path": "pages/admin/user-management",
+			"style": {
+				"navigationBarTitleText": "用户管理"
+			}
 		}
 	],
 	"globalStyle": {

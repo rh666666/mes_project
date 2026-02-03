@@ -58,6 +58,42 @@ import request, { uploadFile } from './request.js'
  */
 
 /**
+ * 用户列表项
+ * @typedef {Object} UserListItem
+ * @property {number} id - 用户ID
+ * @property {string} username - 用户名
+ * @property {string} name - 昵称
+ * @property {string} email - 邮箱
+ * @property {string|null} phone - 手机号
+ * @property {string|null} avatar - 头像URL
+ * @property {string|null} role - 角色
+ * @property {string|null} signature - 个性签名
+ * @property {number|null} creator - 创建人
+ * @property {number|null} modifier - 修改人
+ * @property {string|null} create_datetime - 创建时间
+ * @property {string|null} update_datetime - 修改时间
+ * @property {number|null} dept - 数据归属部门
+ */
+
+/**
+ * 用户列表响应
+ * @typedef {Object} UserListResponse
+ * @property {number} code - 响应码
+ * @property {string} msg - 响应消息
+ * @property {number} page - 当前页码
+ * @property {number} limit - 每页数量
+ * @property {number} total - 总数量
+ * @property {UserListItem[]} data - 用户列表
+ */
+
+/**
+ * 管理员更新用户参数
+ * @typedef {Object} AdminUpdateUserParams
+ * @property {string} [role] - 角色 (admin/user)
+ * @property {number} [dept] - 数据归属部门ID
+ */
+
+/**
  * 更新用户信息参数
  * @typedef {Object} UpdateUserInfoParams
  * @property {string} name - 昵称
@@ -232,6 +268,40 @@ const authApi = {
       method: 'POST',
       data: {
         token: data.token
+      }
+    })
+  },
+
+  /**
+   * 获取用户列表（管理员专属）
+   * @returns {Promise<UserListResponse>} 返回用户列表的Promise
+   * @example
+   * authApi.getUserList()
+   *   .then(res => console.log(res.data))
+   */
+  getUserList() {
+    return request({
+      url: '/api/auth/users/',
+      method: 'GET'
+    })
+  },
+
+  /**
+   * 管理员更新用户信息（管理员专属）
+   * @param {number} id - 用户ID
+   * @param {AdminUpdateUserParams} data - 更新参数
+   * @returns {Promise<{code: number, msg: string, data: UserProfile}>} 返回更新结果的Promise
+   * @example
+   * authApi.adminUpdateUser(1, { role: 'admin', dept: 1 })
+   *   .then(res => console.log(res.data))
+   */
+  adminUpdateUser(id, data) {
+    return request({
+      url: `/api/auth/users/${id}/admin-update/`,
+      method: 'PUT',
+      data: {
+        role: data.role,
+        dept: data.dept
       }
     })
   }

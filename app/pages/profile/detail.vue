@@ -186,8 +186,10 @@ export default {
 
           // 更新本地存储
           const userInfo = uni.getStorageSync(getStorageKey('user_info')) || {}
-          userInfo.avatar = res.data.avatar || ''
-          uni.setStorageSync(getStorageKey('user_info'), userInfo)
+          uni.setStorageSync(getStorageKey('user_info'), {
+            ...userInfo,
+            avatar: res.data.avatar || ''
+          })
         } else {
           uni.showToast({
             title: res.msg || '头像更新失败',
@@ -225,12 +227,14 @@ export default {
           this.profile = res.data
 
           // 根据API响应更新本地存储
+          const currentUserInfo = uni.getStorageSync(getStorageKey('user_info')) || {}
           uni.setStorageSync(getStorageKey('user_info'), {
             id: res.data.id,
             username: res.data.username,
             name: res.data.name,
             avatar: res.data.avatar,
-            signature: res.data.signature
+            signature: res.data.signature,
+            role: currentUserInfo.role || res.data.role || 'user'
           })
         } else {
           uni.showToast({

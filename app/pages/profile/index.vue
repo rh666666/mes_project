@@ -91,7 +91,7 @@
         const token = uni.getStorageSync(getStorageKey('access_token'));
         let userInfo = uni.getStorageSync(getStorageKey('user_info'));
         this.isLoggedIn = !!token;
-        
+
         if (this.isLoggedIn && !userInfo) {
           // 有token但没有用户信息，尝试获取
           try {
@@ -110,7 +110,7 @@
             console.error('获取个人信息失败:', error);
           }
         }
-        
+
         this.userInfo = userInfo || {};
       },
       getAvatarUrl(avatar) {

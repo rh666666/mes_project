@@ -54,14 +54,16 @@ export default {
                 username: profileRes.data.username,
                 name: profileRes.data.name,
                 avatar: profileRes.data.avatar || '',
-                signature: profileRes.data.signature || ''
+                signature: profileRes.data.signature || '',
+                role: profileRes.data.role || 'user'
               })
             }
           } catch (profileError) {
             console.error('获取个人信息失败:', profileError)
             // 即使获取个人信息失败，也使用基本信息
             uni.setStorageSync(getStorageKey('user_info'), {
-              username: formData.username
+              username: formData.username,
+              role: 'user'
             })
           }
 
