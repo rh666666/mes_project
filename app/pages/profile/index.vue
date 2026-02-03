@@ -235,7 +235,7 @@
 
   .avatar-text {
     font-size: $uni-font-size-lg;
-    color: white;
+    color: $uni-md-surface;
     font-weight: 500;
   }
 
