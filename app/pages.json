@@ -7,18 +7,6 @@
 			}
 		},
 		{
-			"path": "pages/production/index",
-			"style": {
-				"navigationBarTitleText": "生产"
-			}
-		},
-		{
-			"path": "pages/equipment/index",
-			"style": {
-				"navigationBarTitleText": "设备"
-			}
-		},
-		{
 			"path": "pages/profile/index",
 			"style": {
 				"navigationBarTitleText": "我的"
@@ -50,29 +38,25 @@
 		}
 	],
 	"globalStyle": {
-		"navigationBarTextStyle": "black",
-		"navigationBarTitleText": "uni-app",
-		"navigationBarBackgroundColor": "#F8F8F8",
 		"backgroundColor": "#F8F8F8"
 	},
 	"tabBar": {
-		"custom": true,
+		"color": "#666666",
+		"selectedColor": "#1976D2",
+		"backgroundColor": "#FFFFFF",
+		"borderStyle": "black",
 		"list": [
 			{
 				"pagePath": "pages/index/index",
-				"text": "首页"
-			},
-			{
-				"pagePath": "pages/production/index",
-				"text": "生产"
-			},
-			{
-				"pagePath": "pages/equipment/index",
-				"text": "设备"
+				"text": "首页",
+				"iconPath": "static/icons/home_24dp_000000_FILL0_wght400_GRAD0_opsz24.png",
+				"selectedIconPath": "static/icons/home_24dp_000000_FILL1_wght400_GRAD0_opsz24.png"
 			},
 			{
 				"pagePath": "pages/profile/index",
-				"text": "我的"
+				"text": "我的",
+				"iconPath": "static/icons/person_24dp_000000_FILL0_wght400_GRAD0_opsz24.png",
+				"selectedIconPath": "static/icons/person_24dp_000000_FILL1_wght400_GRAD0_opsz24.png"
 			}
 		]
 	},

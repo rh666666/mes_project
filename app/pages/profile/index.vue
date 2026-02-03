@@ -155,24 +155,39 @@
         this.logoutDialogVisible = false;
       },
       async performLogout() {
+        uni.showLoading({ title: '注销中...' });
+
         try {
-          await authApi.logout();
+          const res = await authApi.logout();
+
+          if (res.code === 2000) {
+            uni.removeStorageSync(getStorageKey('access_token'));
+            uni.removeStorageSync(getStorageKey('refresh_token'));
+            uni.removeStorageSync(getStorageKey('csrf_token'));
+            uni.removeStorageSync(getStorageKey('user_info'));
+
+            this.isLoggedIn = false;
+            this.userInfo = {};
+
+            uni.showToast({
+              title: '已退出登录',
+              icon: 'success'
+            });
+          } else {
+            uni.showToast({
+              title: res.msg || '注销失败',
+              icon: 'none'
+            });
+          }
         } catch (error) {
           console.error('注销请求失败:', error);
+          uni.showToast({
+            title: error.msg || '注销失败，请稍后重试',
+            icon: 'none'
+          });
+        } finally {
+          uni.hideLoading();
         }
-
-        uni.removeStorageSync(getStorageKey('access_token'));
-        uni.removeStorageSync(getStorageKey('refresh_token'));
-        uni.removeStorageSync(getStorageKey('csrf_token'));
-        uni.removeStorageSync(getStorageKey('user_info'));
-
-        this.isLoggedIn = false;
-        this.userInfo = {};
-
-        uni.showToast({
-          title: '已退出登录',
-          icon: 'success'
-        });
       },
       onSettings() {
         uni.showToast({

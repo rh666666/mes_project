@@ -86,6 +86,7 @@ import authApi from '@/api/auth.js'
 import { getStorageKey, getApiBaseURL } from '@/config/index.js'
 
 export default {
+  components: {},
   data() {
     return {
       profile: {

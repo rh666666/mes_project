@@ -8,9 +8,9 @@
       @update:model-value="$emit('update:modelValue', $event)"
     />
     <view class="password-toggle" @click="togglePassword">
-      <UniIcons
+      <MdIcon
         :type="showPassword ? 'eye-slash' : 'eye'"
-        size="20"
+        :size="40"
         color="#999"
       />
     </view>
@@ -25,8 +25,7 @@
 
 import { ref } from 'vue'
 import FormInput from './FormInput.vue'
-// @ts-ignore
-import UniIcons from '@dcloudio/uni-ui/lib/uni-icons/uni-icons.vue'
+import MdIcon from './MdIcon.vue'
 
 interface Props {
   /** 输入值 */

@@ -1,31 +1,5 @@
 <template>
   <view class="user-management">
-    <!-- 标题栏 -->
-    <view class="header">
-      <text class="header-title">用户管理</text>
-      <view class="header-actions">
-        <view class="refresh-btn" @click="onRefresh">
-          <UniIcons type="refreshempty" size="20" color="#1976D2" />
-        </view>
-      </view>
-    </view>
-
-    <!-- 统计信息 -->
-    <view class="stats-section">
-      <view class="stat-card">
-        <text class="stat-value">{{ userList.length }}</text>
-        <text class="stat-label">总用户数</text>
-      </view>
-      <view class="stat-card">
-        <text class="stat-value">{{ adminCount }}</text>
-        <text class="stat-label">管理员</text>
-      </view>
-      <view class="stat-card">
-        <text class="stat-value">{{ userCount }}</text>
-        <text class="stat-label">普通用户</text>
-      </view>
-    </view>
-
     <!-- 用户列表 -->
     <scroll-view
       class="user-list"
@@ -74,7 +48,7 @@
 
             <!-- end slot: 箭头 -->
             <template #end>
-              <UniIcons type="arrowright" size="18" color="#8E8E93" />
+              <MdIcon type="arrowright" :size="36" color="#8E8E93" />
             </template>
           </ListItem>
         </template>
@@ -82,7 +56,7 @@
 
       <!-- 空状态 -->
       <view v-if="userList.length === 0 && !isLoading" class="empty-state">
-        <UniIcons type="person" size="60" color="#C7C7CC" />
+        <MdIcon type="person" :size="120" color="#C7C7CC" />
         <text class="empty-text">暂无用户数据</text>
       </view>
     </scroll-view>
@@ -143,12 +117,19 @@
       <view class="loading-spinner"></view>
       <text class="loading-text">加载中...</text>
     </view>
+
+    <!-- FAB 刷新按钮 -->
+    <view class="fab-container" @click="onRefresh">
+      <view class="fab" :class="{ 'fab-rotating': isRefreshing }">
+        <MdIcon type="refreshempty" :size="48" color="#FFFFFF" />
+      </view>
+    </view>
   </view>
 </template>
 
 <script>
 import authApi from '@/api/auth.js'
-import UniIcons from '@dcloudio/uni-ui/lib/uni-icons/uni-icons.vue'
+import MdIcon from '@/components/ui/MdIcon.vue'
 import List from '@/components/ui/md3/List.vue'
 import ListItem from '@/components/ui/md3/ListItem.vue'
 import Divider from '@/components/ui/md3/Divider.vue'
@@ -164,7 +145,7 @@ export default {
   name: 'UserManagement',
 
   components: {
-    UniIcons,
+    MdIcon,
     List,
     ListItem,
     Divider,
@@ -618,7 +599,44 @@ export default {
   color: $uni-md-text-secondary;
 }
 
+.fab-container {
+  position: fixed;
+  right: $uni-md-space-lg;
+  bottom: calc($uni-md-space-lg + env(safe-area-inset-bottom));
+  z-index: 100;
+}
+
+.fab {
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: $uni-md-radius-full;
+  background-color: $uni-md-color-primary;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: $uni-md-shadow-md;
+  transition: all $uni-md-animation-fast ease;
+
+  &:active {
+    transform: scale(0.92);
+    box-shadow: $uni-md-shadow-sm;
+  }
+
+  &.fab-rotating {
+    animation: fab-spin 1s linear infinite;
+  }
+}
+
 @keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fab-spin {
   0% {
     transform: rotate(0deg);
   }
