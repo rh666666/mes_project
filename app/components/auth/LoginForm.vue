@@ -57,7 +57,7 @@
 import FormItem from '@/components/ui/FormItem.vue'
 import FormInput from '@/components/ui/FormInput.vue'
 import PasswordInput from '@/components/ui/PasswordInput.vue'
-import Checkbox from '@/components/ui/Checkbox.vue'
+import Checkbox from '@/components/ui/md3/Checkbox.vue'
 import SubmitButton from '@/components/ui/SubmitButton.vue'
 
 export default {

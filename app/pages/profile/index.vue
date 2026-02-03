@@ -31,7 +31,7 @@
     </view>
 
     <!-- 退出登录确认弹窗 -->
-    <MaterialDialog
+    <Dialog
       :visible="logoutDialogVisible"
       title="提示"
       content="确定要退出登录吗？"
@@ -45,14 +45,14 @@
 
 <script>
   import MenuList from '@/components/MenuList.vue';
-  import MaterialDialog from '@/components/MaterialDialog.vue';
+  import Dialog from '@/components/ui/md3/Dialog.vue';
   import authApi from '@/api/auth.js';
   import { getStorageKey, getApiBaseURL } from '@/config/index.js';
 
   export default {
     components: {
       MenuList,
-      MaterialDialog
+      Dialog
     },
     data() {
       return {

@@ -34,40 +34,51 @@
       :refresher-triggered="isRefreshing"
       @refresherrefresh="onRefresh"
     >
-      <view
-        v-for="user in userList"
-        :key="user.id"
-        class="user-item"
-        @click="onUserClick(user)"
-      >
-        <!-- 头像 -->
-        <image
-          v-if="user.avatar"
-          class="user-avatar-img"
-          :src="getAvatarUrl(user.avatar)"
-          mode="aspectFill"
-        />
-        <view v-else class="user-avatar">
-          <text class="avatar-text">{{ getUserInitial(user) }}</text>
-        </view>
+      <List v-if="userList.length > 0" class="user-md3-list">
+        <template v-for="(user, index) in userList" :key="user.id">
+          <ListItem
+            :clickable="true"
+            :has-divider="index < userList.length - 1"
+            @click="onUserClick(user)"
+          >
+            <!-- start slot: 头像 -->
+            <template #start>
+              <image
+                v-if="user.avatar"
+                class="user-avatar-img"
+                :src="getAvatarUrl(user.avatar)"
+                mode="aspectFill"
+              />
+              <view v-else class="user-avatar">
+                <text class="avatar-text">{{ getUserInitial(user) }}</text>
+              </view>
+            </template>
 
-        <!-- 用户信息 -->
-        <view class="user-info">
-          <view class="user-name-row">
-            <text class="user-name">{{ user.name || user.username }}</text>
-            <view class="role-tag" :class="getRoleClass(user.role)">
-              <text class="role-text">{{ getRoleLabel(user.role) }}</text>
-            </view>
-          </view>
-          <text class="user-username">@{{ user.username }}</text>
-          <text v-if="user.email" class="user-email">{{ user.email }}</text>
-        </view>
+            <!-- headline slot: 用户名 -->
+            <template #headline>
+              <text class="user-headline">{{ user.name || user.username }}</text>
+            </template>
 
-        <!-- 操作按钮 -->
-        <view class="user-actions">
-          <UniIcons type="arrowright" size="18" color="#8E8E93" />
-        </view>
-      </view>
+            <!-- supporting-text slot: 用户邮箱/用户名 -->
+            <template #supporting-text>
+              <text v-if="user.email" class="user-supporting-text">{{ user.email }}</text>
+              <text v-else class="user-supporting-text">@{{ user.username }}</text>
+            </template>
+
+            <!-- trailing-supporting-text slot: 角色标签 -->
+            <template #trailing-supporting-text>
+              <view class="role-tag" :class="getRoleClass(user.role)">
+                <text class="role-text">{{ getRoleLabel(user.role) }}</text>
+              </view>
+            </template>
+
+            <!-- end slot: 箭头 -->
+            <template #end>
+              <UniIcons type="arrowright" size="18" color="#8E8E93" />
+            </template>
+          </ListItem>
+        </template>
+      </List>
 
       <!-- 空状态 -->
       <view v-if="userList.length === 0 && !isLoading" class="empty-state">
@@ -77,7 +88,7 @@
     </scroll-view>
 
     <!-- 编辑用户弹窗 -->
-    <MaterialDialog
+    <Dialog
       :visible="editDialogVisible"
       :title="`编辑用户 - ${editingUser?.name || editingUser?.username}`"
       confirm-text="保存"
@@ -85,45 +96,47 @@
       @confirm="onSaveUser"
       @cancel="onCancelEdit"
     >
-      <view class="edit-form">
-        <view class="form-item">
-          <text class="form-label">用户名</text>
-          <text class="form-value readonly">{{ editingUser?.username }}</text>
-        </view>
-        <view class="form-item">
-          <text class="form-label">昵称</text>
-          <text class="form-value readonly">{{ editingUser?.name || '未设置' }}</text>
-        </view>
-        <view class="form-item">
-          <text class="form-label">角色</text>
-          <view class="role-selector">
-            <view
-              class="role-option"
-              :class="{ active: editForm.role === 'admin' }"
-              @click="editForm.role = 'admin'"
-            >
-              <text class="role-option-text">管理员</text>
-            </view>
-            <view
-              class="role-option"
-              :class="{ active: editForm.role === 'user' }"
-              @click="editForm.role = 'user'"
-            >
-              <text class="role-option-text">普通用户</text>
+      <template #content>
+        <view class="edit-form">
+          <view class="form-item">
+            <text class="form-label">用户名</text>
+            <text class="form-value readonly">{{ editingUser?.username }}</text>
+          </view>
+          <view class="form-item">
+            <text class="form-label">昵称</text>
+            <text class="form-value readonly">{{ editingUser?.name || '未设置' }}</text>
+          </view>
+          <view class="form-item">
+            <text class="form-label">角色</text>
+            <view class="role-selector">
+              <view
+                class="role-option"
+                :class="{ active: editForm.role === 'admin' }"
+                @click="editForm.role = 'admin'"
+              >
+                <text class="role-option-text">管理员</text>
+              </view>
+              <view
+                class="role-option"
+                :class="{ active: editForm.role === 'user' }"
+                @click="editForm.role = 'user'"
+              >
+                <text class="role-option-text">普通用户</text>
+              </view>
             </view>
           </view>
+          <view class="form-item">
+            <text class="form-label">部门ID</text>
+            <input
+              class="form-input"
+              v-model="editForm.dept"
+              type="number"
+              placeholder="请输入部门ID"
+            />
+          </view>
         </view>
-        <view class="form-item">
-          <text class="form-label">部门ID</text>
-          <input
-            class="form-input"
-            v-model="editForm.dept"
-            type="number"
-            placeholder="请输入部门ID"
-          />
-        </view>
-      </view>
-    </MaterialDialog>
+      </template>
+    </Dialog>
 
     <!-- 加载状态 -->
     <view v-if="isLoading" class="loading-overlay">
@@ -135,8 +148,11 @@
 
 <script>
 import authApi from '@/api/auth.js'
-import MaterialDialog from '@/components/MaterialDialog.vue'
 import UniIcons from '@dcloudio/uni-ui/lib/uni-icons/uni-icons.vue'
+import List from '@/components/ui/md3/List.vue'
+import ListItem from '@/components/ui/md3/ListItem.vue'
+import Divider from '@/components/ui/md3/Divider.vue'
+import Dialog from '@/components/ui/md3/Dialog.vue'
 import { getApiBaseURL } from '@/config/index.js'
 
 /**
@@ -148,8 +164,11 @@ export default {
   name: 'UserManagement',
 
   components: {
-    MaterialDialog,
-    UniIcons
+    UniIcons,
+    List,
+    ListItem,
+    Divider,
+    Dialog
   },
 
   data() {
@@ -418,19 +437,8 @@ export default {
   padding: 0 $uni-md-space-md;
 }
 
-.user-item {
-  display: flex;
-  align-items: center;
-  padding: $uni-md-space-md;
-  background-color: $uni-md-surface;
-  border-radius: $uni-md-radius-medium;
+.user-md3-list {
   margin-bottom: $uni-md-space-md;
-  box-shadow: $uni-md-shadow-sm;
-  transition: transform $uni-md-animation-fast ease;
-
-  &:active {
-    transform: scale(0.99);
-  }
 }
 
 .user-avatar {
@@ -441,17 +449,13 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: $uni-md-space-md;
-  flex-shrink: 0;
 }
 
 .user-avatar-img {
   width: 80rpx;
   height: 80rpx;
   border-radius: 50%;
-  margin-right: $uni-md-space-md;
   background-color: $uni-md-surface;
-  flex-shrink: 0;
 }
 
 .avatar-text {
@@ -460,22 +464,15 @@ export default {
   font-weight: 500;
 }
 
-.user-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.user-name-row {
-  display: flex;
-  align-items: center;
-  margin-bottom: $uni-md-space-xs;
-}
-
-.user-name {
+.user-headline {
   font-size: $uni-font-size-base;
-  font-weight: 600;
+  font-weight: 500;
   color: $uni-md-text-primary;
-  margin-right: $uni-md-space-sm;
+}
+
+.user-supporting-text {
+  font-size: $uni-font-size-sm;
+  color: $uni-md-text-secondary;
 }
 
 .role-tag {
@@ -502,23 +499,6 @@ export default {
 .role-text {
   font-size: 20rpx;
   font-weight: 500;
-}
-
-.user-username {
-  display: block;
-  font-size: $uni-font-size-sm;
-  color: $uni-md-text-secondary;
-  margin-bottom: $uni-md-space-xs;
-}
-
-.user-email {
-  display: block;
-  font-size: $uni-font-size-sm;
-  color: $uni-md-text-tertiary;
-}
-
-.user-actions {
-  padding: $uni-md-space-sm;
 }
 
 
