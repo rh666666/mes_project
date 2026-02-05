@@ -109,17 +109,26 @@
             </view>
           </view>
 
-          <!-- 部门ID输入 -->
+          <!-- 部门选择 -->
           <view class="form-field">
-            <text class="field-label">部门ID</text>
-            <view class="input-wrapper">
-              <MdIcon type="apartment" :size="36" color="#8E8E93" class="input-icon" />
-              <input
-                class="form-input with-icon"
-                v-model="editForm.dept"
-                type="number"
-                placeholder="请输入部门ID"
-              />
+            <text class="field-label">部门</text>
+            <view class="dept-selector">
+              <view
+                class="dept-option"
+                :class="{ 'dept-option--selected': editForm.dept === null }"
+                @click="editForm.dept = null"
+              >
+                <text class="dept-option-text">无部门</text>
+              </view>
+              <view
+                v-for="dept in deptList"
+                :key="dept.id"
+                class="dept-option"
+                :class="{ 'dept-option--selected': editForm.dept === dept.id }"
+                @click="editForm.dept = dept.id"
+              >
+                <text class="dept-option-text">{{ dept.name }}</text>
+              </view>
             </view>
           </view>
         </form>
@@ -153,6 +162,7 @@
 
 <script>
 import authApi from '@/api/auth.js'
+import deptApi from '@/api/dept.js'
 import MdIcon from '@/components/ui/MdIcon.vue'
 import List from '@/components/ui/md3/List.vue'
 import ListItem from '@/components/ui/md3/ListItem.vue'
@@ -180,6 +190,8 @@ export default {
     return {
       /** @type {Array} 用户列表 */
       userList: [],
+      /** @type {Array} 部门列表 */
+      deptList: [],
       /** @type {boolean} 是否正在加载 */
       isLoading: false,
       /** @type {boolean} 是否正在刷新 */
@@ -299,13 +311,31 @@ export default {
      * 点击用户项
      * @param {Object} user - 用户对象
      */
-    onUserClick(user) {
+    async onUserClick(user) {
       this.editingUser = user
       this.editForm = {
         role: user.role || 'user',
         dept: user.dept || null
       }
+      // 加载部门列表
+      await this.loadDeptList()
       this.editDialogVisible = true
+    },
+
+    /**
+     * 加载部门列表
+     * @async
+     * @returns {Promise<void>}
+     */
+    async loadDeptList() {
+      try {
+        const res = await deptApi.getDeptList()
+        if (res.code === 2000) {
+          this.deptList = res.data || []
+        }
+      } catch (error) {
+        console.error('获取部门列表失败:', error)
+      }
     },
 
     /**
@@ -617,6 +647,39 @@ export default {
   display: flex;
   flex-wrap: wrap;
   gap: $uni-md-space-sm;
+}
+
+.dept-selector {
+  display: flex;
+  flex-direction: column;
+  gap: $uni-md-space-xs;
+  max-height: 300rpx;
+  overflow-y: auto;
+}
+
+.dept-option {
+  padding: $uni-md-space-sm $uni-md-space-md;
+  border-radius: $uni-md-radius-small;
+  background-color: $uni-md-surface-variant;
+  transition: all $uni-md-animation-fast ease;
+
+  &:active {
+    background-color: rgba($uni-md-color-primary, 0.1);
+  }
+
+  &--selected {
+    background-color: rgba($uni-md-color-primary, 0.15);
+
+    .dept-option-text {
+      color: $uni-md-color-primary;
+      font-weight: 500;
+    }
+  }
+}
+
+.dept-option-text {
+  font-size: $uni-font-size-sm;
+  color: $uni-md-text-secondary;
 }
 
 .dialog-action-btn {
