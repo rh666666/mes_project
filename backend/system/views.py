@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 import uuid
 
@@ -21,6 +22,12 @@ from .models import Dept
 from .serializers import (
     AvatarUploadRequestSerializer,
     AvatarUploadResponseSerializer,
+    DeptCreateRequestSerializer,
+    DeptDetailResponseSerializer,
+    DeptListRequestSerializer,
+    DeptListResponseSerializer,
+    DeptSerializer,
+    DeptUpdateRequestSerializer,
     LoginRequestSerializer,
     LoginResponseSerializer,
     LogoutRequestSerializer,
@@ -35,6 +42,8 @@ from .serializers import (
     UserProfileUpdateResponseSerializer,
     UserSerializer,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class IsAdmin(BasePermission):
@@ -207,6 +216,238 @@ class AuthViewSet(viewsets.ViewSet):
             return ErrorResponse(msg=str(e), status=status.HTTP_400_BAD_REQUEST)
 
         return DetailResponse(data=UserSerializer(user).data)
+
+
+class DeptViewSet(viewsets.ViewSet):
+    """部门视图集
+
+    处理部门的增删改查操作，仅管理员可操作。
+    """
+
+    permission_classes = [IsAdmin]
+
+    @extend_schema(
+        summary="获取部门列表",
+        description="获取部门列表，支持分页和按名称过滤",
+        request=DeptListRequestSerializer,
+        responses={
+            200: OpenApiResponse(response=DeptListResponseSerializer, description="获取成功"),
+            400: OpenApiResponse(response=ErrorResponseSerializer, description="参数错误"),
+            403: OpenApiResponse(response=ErrorResponseSerializer, description="无权限"),
+        },
+        tags=["部门"],
+    )
+    def list(self, request: Request) -> Response:
+        """获取部门列表
+
+        Args:
+            request: 包含 page、limit 和可选 name 过滤条件的请求
+
+        Returns:
+            Response: 分页部门列表
+        """
+        serializer = DeptListRequestSerializer(data=request.query_params)
+        if not serializer.is_valid():
+            return ErrorResponse(msg=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        page = serializer.validated_data.get("page", 1)
+        limit = serializer.validated_data.get("limit", 10)
+        name_filter = serializer.validated_data.get("name")
+
+        queryset = Dept.objects.all().order_by("-create_datetime")
+
+        if name_filter:
+            queryset = queryset.filter(name__icontains=name_filter)
+
+        total = queryset.count()
+        start = (page - 1) * limit
+        end = start + limit
+        depts = queryset[start:end]
+
+        return SuccessResponse(data=DeptSerializer(depts, many=True).data, page=page, limit=limit, total=total)
+
+    @extend_schema(
+        summary="获取部门详情",
+        description="根据部门ID获取部门详细信息",
+        responses={
+            200: OpenApiResponse(response=DeptDetailResponseSerializer, description="获取成功"),
+            403: OpenApiResponse(response=ErrorResponseSerializer, description="无权限"),
+            404: OpenApiResponse(response=ErrorResponseSerializer, description="部门不存在"),
+        },
+        tags=["部门"],
+    )
+    def retrieve(self, request: Request, pk: int) -> Response:
+        """获取部门详情
+
+        Args:
+            request: 请求对象
+            pk: 部门ID
+
+        Returns:
+            Response: 部门详细信息
+        """
+        try:
+            dept = Dept.objects.get(id=pk)
+        except Dept.DoesNotExist:
+            return ErrorResponse(msg="部门不存在", status=status.HTTP_404_NOT_FOUND)
+
+        return DetailResponse(data=DeptSerializer(dept).data)
+
+    @extend_schema(
+        summary="创建部门",
+        description="创建新部门，code 必须唯一",
+        request=DeptCreateRequestSerializer,
+        responses={
+            200: OpenApiResponse(response=DeptDetailResponseSerializer, description="创建成功"),
+            400: OpenApiResponse(response=ErrorResponseSerializer, description="参数错误或部门编码已存在"),
+            403: OpenApiResponse(response=ErrorResponseSerializer, description="无权限"),
+        },
+        tags=["部门"],
+    )
+    @transaction.atomic
+    def create(self, request: Request) -> Response:
+        """创建部门
+
+        Args:
+            request: 包含 code、name 和可选 parent 的创建请求
+
+        Returns:
+            Response: 创建的部门信息
+        """
+        serializer = DeptCreateRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return ErrorResponse(msg=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        code = serializer.validated_data["code"]
+        name = serializer.validated_data["name"]
+        parent_id = serializer.validated_data.get("parent")
+
+        if Dept.objects.filter(code=code).exists():
+            return ErrorResponse(msg="部门编码已存在", status=status.HTTP_400_BAD_REQUEST)
+
+        parent = None
+        if parent_id is not None:
+            try:
+                parent = Dept.objects.get(id=parent_id)
+            except Dept.DoesNotExist:
+                return ErrorResponse(msg="父级部门不存在", status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            dept = Dept.objects.create(code=code, name=name, parent=parent)
+            logger.info("部门已创建: %s (编码: %s)", name, code)
+        except Exception as e:
+            logger.error("创建部门失败: %s", str(e))
+            return ErrorResponse(msg=str(e), status=status.HTTP_400_BAD_REQUEST)
+
+        return DetailResponse(data=DeptSerializer(dept).data)
+
+    @extend_schema(
+        summary="更新部门",
+        description="更新部门信息，code 必须唯一",
+        request=DeptUpdateRequestSerializer,
+        responses={
+            200: OpenApiResponse(response=DeptDetailResponseSerializer, description="更新成功"),
+            400: OpenApiResponse(response=ErrorResponseSerializer, description="参数错误或部门编码已存在"),
+            403: OpenApiResponse(response=ErrorResponseSerializer, description="无权限"),
+            404: OpenApiResponse(response=ErrorResponseSerializer, description="部门不存在"),
+        },
+        tags=["部门"],
+    )
+    @transaction.atomic
+    def update(self, request: Request, pk: int) -> Response:
+        """更新部门
+
+        Args:
+            request: 包含 code、name 和/或 parent 的更新请求
+            pk: 部门ID
+
+        Returns:
+            Response: 更新后的部门信息
+        """
+        try:
+            dept = Dept.objects.get(id=pk)
+        except Dept.DoesNotExist:
+            return ErrorResponse(msg="部门不存在", status=status.HTTP_404_NOT_FOUND)
+
+        serializer = DeptUpdateRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return ErrorResponse(msg=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        code = serializer.validated_data.get("code")
+        name = serializer.validated_data.get("name")
+        parent_id = serializer.validated_data.get("parent")
+
+        if code is not None and code != dept.code:
+            if Dept.objects.filter(code=code).exists():
+                return ErrorResponse(msg="部门编码已存在", status=status.HTTP_400_BAD_REQUEST)
+            dept.code = code
+
+        if name is not None:
+            dept.name = name
+
+        if parent_id is not None:
+            if parent_id == pk:
+                return ErrorResponse(msg="不能将自己设为父级部门", status=status.HTTP_400_BAD_REQUEST)
+            try:
+                parent = Dept.objects.get(id=parent_id)
+                dept.parent = parent
+            except Dept.DoesNotExist:
+                return ErrorResponse(msg="父级部门不存在", status=status.HTTP_400_BAD_REQUEST)
+        elif "parent" in request.data and parent_id is None:
+            dept.parent = None
+
+        try:
+            dept.save()
+            logger.info("部门已更新: %s (ID: %s)", dept.name, pk)
+        except Exception as e:
+            logger.error("更新部门 %s 失败: %s", pk, str(e))
+            return ErrorResponse(msg=str(e), status=status.HTTP_400_BAD_REQUEST)
+
+        return DetailResponse(data=DeptSerializer(dept).data)
+
+    @extend_schema(
+        summary="删除部门",
+        description="删除指定部门",
+        responses={
+            200: OpenApiResponse(response=DeptDetailResponseSerializer, description="删除成功"),
+            400: OpenApiResponse(response=ErrorResponseSerializer, description="删除失败，部门下存在子部门或用户"),
+            403: OpenApiResponse(response=ErrorResponseSerializer, description="无权限"),
+            404: OpenApiResponse(response=ErrorResponseSerializer, description="部门不存在"),
+        },
+        tags=["部门"],
+    )
+    @transaction.atomic
+    def destroy(self, request: Request, pk: int) -> Response:
+        """删除部门
+
+        Args:
+            request: 请求对象
+            pk: 部门ID
+
+        Returns:
+            Response: 删除结果
+        """
+        try:
+            dept = Dept.objects.get(id=pk)
+        except Dept.DoesNotExist:
+            return ErrorResponse(msg="部门不存在", status=status.HTTP_404_NOT_FOUND)
+
+        if dept.children.exists():
+            return ErrorResponse(msg="该部门下存在子部门，无法删除", status=status.HTTP_400_BAD_REQUEST)
+
+        User = get_user_model()
+        if User.objects.filter(dept=dept).exists():
+            return ErrorResponse(msg="该部门下存在用户，无法删除", status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            dept_name = dept.name
+            dept.delete()
+            logger.info("部门已删除: %s (ID: %s)", dept_name, pk)
+        except Exception as e:
+            logger.error("删除部门 %s 失败: %s", pk, str(e))
+            return ErrorResponse(msg=str(e), status=status.HTTP_400_BAD_REQUEST)
+
+        return DetailResponse(data=None, msg="删除成功")
 
 
 class UserViewSet(viewsets.ViewSet):
@@ -424,3 +665,4 @@ class UserViewSet(viewsets.ViewSet):
             return ErrorResponse(msg=str(e), status=status.HTTP_400_BAD_REQUEST)
 
         return DetailResponse(data=UserSerializer(user).data)
+

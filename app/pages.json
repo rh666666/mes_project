@@ -35,6 +35,12 @@
 			"style": {
 				"navigationBarTitleText": "用户管理"
 			}
+		},
+		{
+			"path": "pages/admin/dept-management",
+			"style": {
+				"navigationBarTitleText": "部门管理"
+			}
 		}
 	],
 	"globalStyle": {

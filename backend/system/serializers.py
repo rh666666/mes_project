@@ -11,6 +11,7 @@ from utils import (
     SuccessResponseSerializer,
 )
 
+from .models import Dept
 from .models import User as SystemUser
 
 # ==================== 业务序列化器 ====================
@@ -24,7 +25,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SystemUser
-        fields = ["id", "creator", "modifier", "create_datetime", "update_datetime", "dept", "username", "email", "name", "phone", "role", "signature", "avatar"]
+        fields = "__all__"
         read_only_fields = ["id"]
 
 
@@ -71,6 +72,39 @@ class UserCreateSerializer(serializers.ModelSerializer):
             avatar=validated_data.get("avatar", None),
         )
         return user
+    
+
+class DeptSerializer(serializers.ModelSerializer):
+    """部门序列化器"""
+
+    class Meta:
+        model = Dept
+        fields = "__all__"
+        read_only_fields = ["id"]
+        
+        
+class DeptCreateSerializer(serializers.ModelSerializer):
+    """部门创建序列化器"""
+
+    class Meta:
+        model = Dept
+        fields = ["code", "name", "parent"]
+        
+    def create(self, validated_data):
+        """创建新部门
+
+        Args:
+            validated_data: 验证后的部门数据
+
+        Returns:
+            Dept: 创建的部门实例
+        """
+        dept = Dept.objects.create(
+            code=validated_data["code"],
+            name=validated_data["name"],
+            parent=validated_data.get("parent", None),
+        )
+        return dept
 
 
 # ==================== Swagger 文档序列化器 ====================
@@ -196,3 +230,39 @@ class AvatarUploadResponseSerializer(DetailResponseSerializer):
     """头像上传响应序列化器"""
 
     data = UserSerializer(help_text="更新后的用户详细信息")
+
+
+class DeptListRequestSerializer(serializers.Serializer):
+    """部门列表请求序列化器"""
+
+    page = serializers.IntegerField(required=False, default=1, min_value=1, help_text="页码")
+    limit = serializers.IntegerField(required=False, default=10, min_value=1, max_value=100, help_text="每页数量")
+    name = serializers.CharField(required=False, help_text="部门名称过滤")
+
+
+class DeptListResponseSerializer(SuccessResponseSerializer):
+    """部门列表响应序列化器"""
+
+    data = serializers.ListField(child=DeptSerializer(), help_text="部门列表")
+
+
+class DeptDetailResponseSerializer(DetailResponseSerializer):
+    """部门详情响应序列化器"""
+
+    data = DeptSerializer(help_text="部门详细信息")
+
+
+class DeptCreateRequestSerializer(serializers.Serializer):
+    """部门创建请求序列化器"""
+
+    code = serializers.CharField(required=True, help_text="部门编码")
+    name = serializers.CharField(required=True, help_text="部门名称")
+    parent = serializers.IntegerField(required=False, allow_null=True, help_text="父级部门ID")
+
+
+class DeptUpdateRequestSerializer(serializers.Serializer):
+    """部门更新请求序列化器"""
+
+    code = serializers.CharField(required=False, help_text="部门编码")
+    name = serializers.CharField(required=False, help_text="部门名称")
+    parent = serializers.IntegerField(required=False, allow_null=True, help_text="父级部门ID")

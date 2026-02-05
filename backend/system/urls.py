@@ -3,7 +3,7 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .views import AuthViewSet, UserViewSet
+from .views import AuthViewSet, DeptViewSet, UserViewSet
 
 # 创建路由器
 router = DefaultRouter()
@@ -14,6 +14,9 @@ router.register(r"", AuthViewSet, basename="auth")
 
 # UserViewSet - 用户相关 (获取/更新个人信息、上传头像、管理员功能)
 router.register(r"users", UserViewSet, basename="users")
+
+# DeptViewSet - 部门相关 (增删改查)
+router.register(r"depts", DeptViewSet, basename="depts")
 
 urlpatterns = [
     path("", include(router.urls)),

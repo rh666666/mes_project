@@ -64,7 +64,8 @@ export default {
      */
     adminMenuItems() {
       return [
-        { text: '用户管理', key: 'userManagement' }
+        { text: '用户管理', key: 'userManagement' },
+        { text: '部门管理', key: 'deptManagement' }
       ];
     }
   },
@@ -89,6 +90,8 @@ export default {
     onMenuClick(item) {
       if (item.key === 'userManagement') {
         this.onUserManagement();
+      } else if (item.key === 'deptManagement') {
+        this.onDeptManagement();
       }
     },
 
@@ -98,6 +101,15 @@ export default {
     onUserManagement() {
       uni.navigateTo({
         url: '/pages/admin/user-management'
+      });
+    },
+
+    /**
+     * 跳转到部门管理页面
+     */
+    onDeptManagement() {
+      uni.navigateTo({
+        url: '/pages/admin/dept-management'
       });
     }
   }
