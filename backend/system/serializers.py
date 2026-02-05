@@ -4,6 +4,7 @@
 以及用于 Swagger 文档生成的请求/响应序列化器。
 """
 
+from drf_spectacular.utils import extend_schema_serializer
 from rest_framework import serializers
 
 from utils import (
@@ -21,11 +22,27 @@ class UserSerializer(serializers.ModelSerializer):
     """用户序列化器
 
     用于序列化用户模型数据，返回用户的基本信息。
+    注意：明确指定字段以避免暴露敏感信息（如 password, is_superuser 等）。
     """
 
     class Meta:
         model = SystemUser
-        fields = "__all__"
+        fields = [
+            "id",
+            "username",
+            "name",
+            "email",
+            "phone",
+            "role",
+            "avatar",
+            "signature",
+            "dept",
+            "description",
+            "create_datetime",
+            "update_datetime",
+            "creator",
+            "modifier",
+        ]
         read_only_fields = ["id"]
 
 
@@ -220,6 +237,7 @@ class UserListRequestSerializer(serializers.Serializer):
     dept = serializers.IntegerField(required=False, help_text="部门ID过滤")
 
 
+@extend_schema_serializer(many=False)
 class UserListResponseSerializer(SuccessResponseSerializer):
     """用户列表响应序列化器"""
 
@@ -240,6 +258,7 @@ class DeptListRequestSerializer(serializers.Serializer):
     name = serializers.CharField(required=False, help_text="部门名称过滤")
 
 
+@extend_schema_serializer(many=False)
 class DeptListResponseSerializer(SuccessResponseSerializer):
     """部门列表响应序列化器"""
 
