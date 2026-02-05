@@ -53,7 +53,15 @@ select = [
     "SIM", # flake8-simplify
     "TID", # flake8-tidy-imports
 ]
-extend-ignore = ["RUF012", "E501", "RUF001", "RUF002", "RUF003", "SIM105", "N806"]
+extend-ignore = [
+    "RUF012",
+    "E501",
+    "RUF001",
+    "RUF002",
+    "RUF003",
+    "SIM105",
+    "N806",
+]
 [tool.ruff.lint.per-file-ignores]
 "**/migrations/**.py" = ["D100", "D101", "D102", "D103", "E501", "RUF012"]
 "**/tests/**/*.py" = [
@@ -89,6 +97,5 @@ indent-style = "space"
 quote-style = "double"
 
 [dependency-groups]
-dev = [
-    "ruff>=0.14.14",
-]
+dev = ["ruff>=0.14.14"]
+linux = ["uvloop>=0.19.0"]
