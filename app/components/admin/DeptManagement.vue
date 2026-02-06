@@ -94,25 +94,14 @@
 
           <!-- 父级部门选择 -->
           <view class="form-field">
-            <text class="field-label">父级部门</text>
-            <view class="parent-selector">
-              <view
-                class="parent-option"
-                :class="{ 'parent-option--selected': editForm.parent === null }"
-                @click="editForm.parent = null"
-              >
-                <text class="parent-option-text">无（顶级部门）</text>
-              </view>
-              <view
-                v-for="dept in availableParentDepts"
-                :key="dept.id"
-                class="parent-option"
-                :class="{ 'parent-option--selected': editForm.parent === dept.id }"
-                @click="editForm.parent = dept.id"
-              >
-                <text class="parent-option-text">{{ dept.name }}</text>
-              </view>
-            </view>
+            <Select
+              v-model="editForm.parent"
+              :options="parentDeptOptions"
+              label="父级部门"
+              variant="outlined"
+              placeholder="请选择父级部门"
+              prefix-icon="account_tree"
+            />
           </view>
         </form>
       </template>
@@ -185,6 +174,7 @@ import MdIcon from '@/components/ui/MdIcon.vue'
 import List from '@/components/ui/md3/List.vue'
 import ListItem from '@/components/ui/md3/ListItem.vue'
 import Dialog from '@/components/ui/md3/Dialog.vue'
+import Select from '@/components/ui/md3/Select.vue'
 
 /**
  * 部门管理组件（管理员专属）
@@ -198,7 +188,8 @@ export default {
     MdIcon,
     List,
     ListItem,
-    Dialog
+    Dialog,
+    Select
   },
 
   data() {
@@ -228,15 +219,18 @@ export default {
 
   computed: {
     /**
-     * 可作为父级部门的选项（排除当前编辑的部门及其子部门）
-     * @returns {Array}
+     * 父级部门选项列表（包含"无"选项，排除当前编辑的部门）
+     * @returns {Array<{value: number|null, label: string}>}
      */
-    availableParentDepts() {
-      if (!this.editingDept) {
-        return this.deptList
-      }
-      // 排除当前编辑的部门
-      return this.deptList.filter(dept => dept.id !== this.editingDept.id)
+    parentDeptOptions() {
+      const options = [{ value: null, label: '无（顶级部门）' }]
+      const availableDepts = this.editingDept
+        ? this.deptList.filter(dept => dept.id !== this.editingDept.id)
+        : this.deptList
+      availableDepts.forEach(dept => {
+        options.push({ value: dept.id, label: dept.name })
+      })
+      return options
     }
   },
 
@@ -563,38 +557,7 @@ export default {
   }
 }
 
-.parent-selector {
-  display: flex;
-  flex-direction: column;
-  gap: $uni-md-space-xs;
-  max-height: 300rpx;
-  overflow-y: auto;
-}
 
-.parent-option {
-  padding: $uni-md-space-sm $uni-md-space-md;
-  border-radius: $uni-md-radius-small;
-  background-color: $uni-md-surface-variant;
-  transition: all $uni-md-animation-fast ease;
-
-  &:active {
-    background-color: rgba($uni-md-color-primary, 0.1);
-  }
-
-  &--selected {
-    background-color: rgba($uni-md-color-primary, 0.15);
-
-    .parent-option-text {
-      color: $uni-md-color-primary;
-      font-weight: 500;
-    }
-  }
-}
-
-.parent-option-text {
-  font-size: $uni-font-size-sm;
-  color: $uni-md-text-secondary;
-}
 
 .dialog-action-btn {
   padding: $uni-md-space-sm $uni-md-space-md;

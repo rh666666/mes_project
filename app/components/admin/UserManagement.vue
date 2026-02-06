@@ -111,25 +111,14 @@
 
           <!-- 部门选择 -->
           <view class="form-field">
-            <text class="field-label">部门</text>
-            <view class="dept-selector">
-              <view
-                class="dept-option"
-                :class="{ 'dept-option--selected': editForm.dept === null }"
-                @click="editForm.dept = null"
-              >
-                <text class="dept-option-text">无部门</text>
-              </view>
-              <view
-                v-for="dept in deptList"
-                :key="dept.id"
-                class="dept-option"
-                :class="{ 'dept-option--selected': editForm.dept === dept.id }"
-                @click="editForm.dept = dept.id"
-              >
-                <text class="dept-option-text">{{ dept.name }}</text>
-              </view>
-            </view>
+            <Select
+              v-model="editForm.dept"
+              :options="deptOptions"
+              label="部门"
+              variant="outlined"
+              placeholder="请选择部门"
+              prefix-icon="apartment"
+            />
           </view>
         </form>
       </template>
@@ -168,6 +157,7 @@ import List from '@/components/ui/md3/List.vue'
 import ListItem from '@/components/ui/md3/ListItem.vue'
 import Dialog from '@/components/ui/md3/Dialog.vue'
 import Chip from '@/components/ui/md3/Chip.vue'
+import Select from '@/components/ui/md3/Select.vue'
 import { getApiBaseURL } from '@/config/index.js'
 
 /**
@@ -183,7 +173,8 @@ export default {
     List,
     ListItem,
     Dialog,
-    Chip
+    Chip,
+    Select
   },
 
   data() {
@@ -223,6 +214,18 @@ export default {
      */
     userCount() {
       return this.userList.filter(user => user.role === 'user' || !user.role).length
+    },
+
+    /**
+     * 部门选项列表（包含"无部门"选项）
+     * @returns {Array<{value: number|null, label: string}>}
+     */
+    deptOptions() {
+      const options = [{ value: null, label: '无部门' }]
+      this.deptList.forEach(dept => {
+        options.push({ value: dept.id, label: dept.name })
+      })
+      return options
     }
   },
 
@@ -647,39 +650,6 @@ export default {
   display: flex;
   flex-wrap: wrap;
   gap: $uni-md-space-sm;
-}
-
-.dept-selector {
-  display: flex;
-  flex-direction: column;
-  gap: $uni-md-space-xs;
-  max-height: 300rpx;
-  overflow-y: auto;
-}
-
-.dept-option {
-  padding: $uni-md-space-sm $uni-md-space-md;
-  border-radius: $uni-md-radius-small;
-  background-color: $uni-md-surface-variant;
-  transition: all $uni-md-animation-fast ease;
-
-  &:active {
-    background-color: rgba($uni-md-color-primary, 0.1);
-  }
-
-  &--selected {
-    background-color: rgba($uni-md-color-primary, 0.15);
-
-    .dept-option-text {
-      color: $uni-md-color-primary;
-      font-weight: 500;
-    }
-  }
-}
-
-.dept-option-text {
-  font-size: $uni-font-size-sm;
-  color: $uni-md-text-secondary;
 }
 
 .dialog-action-btn {
