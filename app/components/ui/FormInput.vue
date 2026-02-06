@@ -80,7 +80,7 @@ const handleBlur = (event: FocusEvent): void => {
 <style lang="scss" scoped>
 .form-input {
   width: 100%;
-  height: 96rpx;
+  height: 88rpx;
   padding: 0 $uni-md-space-md;
   background-color: $uni-md-surface;
   border: 1px solid $uni-md-border;

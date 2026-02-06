@@ -110,16 +110,14 @@
           </view>
 
           <!-- 部门选择 -->
-          <view class="form-field">
-            <Select
-              v-model="editForm.dept"
-              :options="deptOptions"
-              label="部门"
-              variant="outlined"
-              placeholder="请选择部门"
-              prefix-icon="apartment"
-            />
-          </view>
+          <FormInputField
+            v-model="editForm.dept"
+            type="select"
+            label="部门"
+            placeholder="请选择部门"
+            icon="apartment"
+            :options="deptOptions"
+          />
         </form>
       </template>
 
@@ -157,7 +155,7 @@ import List from '@/components/ui/md3/List.vue'
 import ListItem from '@/components/ui/md3/ListItem.vue'
 import Dialog from '@/components/ui/md3/Dialog.vue'
 import Chip from '@/components/ui/md3/Chip.vue'
-import Select from '@/components/ui/md3/Select.vue'
+import FormInputField from '@/components/ui/FormInputField.vue'
 import { getApiBaseURL } from '@/config/index.js'
 
 /**
@@ -174,7 +172,7 @@ export default {
     ListItem,
     Dialog,
     Chip,
-    Select
+    FormInputField
   },
 
   data() {
@@ -568,6 +566,19 @@ export default {
   gap: $uni-md-space-lg;
 }
 
+/* 表单字段样式 - 用于角色选择等非输入项 */
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: $uni-md-space-sm;
+}
+
+.field-label {
+  font-size: $uni-font-size-sm;
+  font-weight: 500;
+  color: $uni-md-text-primary;
+}
+
 /* 只读区域样式 - 简洁行内展示 */
 .readonly-section {
   display: flex;
@@ -593,57 +604,6 @@ export default {
   font-size: $uni-font-size-sm;
   color: $uni-md-text-primary;
   font-weight: 500;
-}
-
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: $uni-md-space-sm;
-  margin-bottom: $uni-md-space-md;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-}
-
-.field-label {
-  font-size: $uni-font-size-sm;
-  font-weight: 500;
-  color: $uni-md-text-primary;
-}
-
-.input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.input-icon {
-  position: absolute;
-  left: $uni-md-space-md;
-  z-index: 1;
-}
-
-.form-input {
-  width: 100%;
-  height: 88rpx;
-  padding: 0 $uni-md-space-md;
-  background-color: $uni-md-surface;
-  border: 1px solid $uni-md-border;
-  border-radius: $uni-md-radius-medium;
-  font-size: $uni-font-size-base;
-  color: $uni-md-text-primary;
-  box-sizing: border-box;
-  transition: border-color $uni-md-animation-fast ease;
-
-  &.with-icon {
-    padding-left: 80rpx;
-  }
-
-  &:focus {
-    border-color: $uni-md-color-primary;
-    outline: none;
-  }
 }
 
 .chip-set {

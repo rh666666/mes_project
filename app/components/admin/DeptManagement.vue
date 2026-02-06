@@ -63,46 +63,32 @@
       <template #content>
         <form id="edit-dept-form" method="dialog" class="edit-form">
           <!-- 部门编码 -->
-          <view class="form-field">
-            <text class="field-label">部门编码</text>
-            <view class="input-wrapper">
-              <MdIcon type="badge" :size="36" color="#8E8E93" class="input-icon" />
-              <input
-                class="form-input with-icon"
-                v-model="editForm.code"
-                type="text"
-                placeholder="请输入部门编码"
-                maxlength="100"
-              />
-            </view>
-          </view>
+          <FormInputField
+            v-model="editForm.code"
+            label="部门编码"
+            placeholder="请输入部门编码"
+            icon="badge"
+            :maxlength="100"
+          />
 
           <!-- 部门名称 -->
-          <view class="form-field">
-            <text class="field-label">部门名称</text>
-            <view class="input-wrapper">
-              <MdIcon type="apartment" :size="36" color="#8E8E93" class="input-icon" />
-              <input
-                class="form-input with-icon"
-                v-model="editForm.name"
-                type="text"
-                placeholder="请输入部门名称"
-                maxlength="100"
-              />
-            </view>
-          </view>
+          <FormInputField
+            v-model="editForm.name"
+            label="部门名称"
+            placeholder="请输入部门名称"
+            icon="apartment"
+            :maxlength="100"
+          />
 
           <!-- 父级部门选择 -->
-          <view class="form-field">
-            <Select
-              v-model="editForm.parent"
-              :options="parentDeptOptions"
-              label="父级部门"
-              variant="outlined"
-              placeholder="请选择父级部门"
-              prefix-icon="account_tree"
-            />
-          </view>
+          <FormInputField
+            v-model="editForm.parent"
+            type="select"
+            label="父级部门"
+            placeholder="请选择父级部门"
+            icon="account_tree"
+            :options="parentDeptOptions"
+          />
         </form>
       </template>
 
@@ -174,7 +160,7 @@ import MdIcon from '@/components/ui/MdIcon.vue'
 import List from '@/components/ui/md3/List.vue'
 import ListItem from '@/components/ui/md3/ListItem.vue'
 import Dialog from '@/components/ui/md3/Dialog.vue'
-import Select from '@/components/ui/md3/Select.vue'
+import FormInputField from '@/components/ui/FormInputField.vue'
 
 /**
  * 部门管理组件（管理员专属）
@@ -189,7 +175,7 @@ export default {
     List,
     ListItem,
     Dialog,
-    Select
+    FormInputField
   },
 
   data() {
@@ -506,58 +492,6 @@ export default {
   flex-direction: column;
   gap: $uni-md-space-lg;
 }
-
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: $uni-md-space-sm;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-}
-
-.field-label {
-  font-size: $uni-font-size-sm;
-  font-weight: 500;
-  color: $uni-md-text-primary;
-}
-
-.input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.input-icon {
-  position: absolute;
-  left: $uni-md-space-md;
-  z-index: 1;
-}
-
-.form-input {
-  width: 100%;
-  height: 88rpx;
-  padding: 0 $uni-md-space-md;
-  background-color: $uni-md-surface;
-  border: 1px solid $uni-md-border;
-  border-radius: $uni-md-radius-medium;
-  font-size: $uni-font-size-base;
-  color: $uni-md-text-primary;
-  box-sizing: border-box;
-  transition: border-color $uni-md-animation-fast ease;
-
-  &.with-icon {
-    padding-left: 80rpx;
-  }
-
-  &:focus {
-    border-color: $uni-md-color-primary;
-    outline: none;
-  }
-}
-
-
 
 .dialog-action-btn {
   padding: $uni-md-space-sm $uni-md-space-md;

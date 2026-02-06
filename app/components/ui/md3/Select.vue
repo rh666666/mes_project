@@ -1,83 +1,32 @@
 <template>
   <view class="md3-select" :class="[`variant-${variant}`, { 'is-open': isOpen, 'is-disabled': disabled, 'is-error': error }]">
-    <!-- Filled 变体 -->
-    <template v-if="variant === 'filled'">
-      <view
-        class="md3-select__container md3-select__container--filled"
-        @click="toggleDropdown"
-      >
-        <!-- 前缀图标 -->
-        <view v-if="prefixIcon" class="md3-select__prefix">
-          <MdIcon :type="prefixIcon" :size="20" :color="iconColor" />
-        </view>
-
-        <!-- 文本区域 -->
-        <view class="md3-select__text-field">
-          <text
-            class="md3-select__label"
-            :class="{ 'is-floating': isLabelFloating }"
-          >{{ label }}</text>
-          <text
-            class="md3-select__value"
-            :class="{ 'is-placeholder': !selectedLabel }"
-          >{{ selectedLabel || placeholder }}</text>
-        </view>
-
-        <!-- 后缀图标 -->
-        <view class="md3-select__suffix">
-          <MdIcon
-            type="arrow_drop_down"
-            :size="24"
-            :color="iconColor"
-            :class="{ 'is-rotated': isOpen }"
-          />
-        </view>
+    <!-- Select 容器 - 与 input 样式统一 -->
+    <view
+      class="md3-select__container"
+      :class="{ 'with-icon': prefixIcon }"
+      @click="toggleDropdown"
+    >
+      <!-- 前缀图标 -->
+      <view v-if="prefixIcon" class="md3-select__prefix">
+        <MdIcon :type="prefixIcon" :size="36" :color="iconColor" />
       </view>
-    </template>
 
-    <!-- Outlined 变体 -->
-    <template v-else>
-      <view
-        class="md3-select__container md3-select__container--outlined"
-        @click="toggleDropdown"
-      >
-        <!-- 前缀图标 -->
-        <view v-if="prefixIcon" class="md3-select__prefix">
-          <MdIcon :type="prefixIcon" :size="20" :color="iconColor" />
-        </view>
+      <!-- 值文本 -->
+      <text
+        class="md3-select__value"
+        :class="{ 'is-placeholder': !selectedLabel }"
+      >{{ selectedLabel || placeholder }}</text>
 
-        <!-- 文本区域 -->
-        <view class="md3-select__text-field">
-          <text
-            class="md3-select__label"
-            :class="{ 'is-floating': isLabelFloating }"
-          >{{ label }}</text>
-          <text
-            class="md3-select__value"
-            :class="{ 'is-placeholder': !selectedLabel }"
-          >{{ selectedLabel || placeholder }}</text>
-        </view>
-
-        <!-- 后缀图标 -->
-        <view class="md3-select__suffix">
-          <MdIcon
-            type="arrow_drop_down"
-            :size="24"
-            :color="iconColor"
-            :class="{ 'is-rotated': isOpen }"
-          />
-        </view>
-
-        <!-- 边框 -->
-        <view class="md3-select__outline">
-          <view class="md3-select__outline-leading"></view>
-          <view class="md3-select__outline-notch" :class="{ 'is-floating': isLabelFloating }">
-            <text v-if="isLabelFloating" class="md3-select__outline-label">{{ label }}</text>
-          </view>
-          <view class="md3-select__outline-trailing"></view>
-        </view>
+      <!-- 后缀图标 -->
+      <view class="md3-select__suffix">
+        <MdIcon
+          type="arrow_drop_down"
+          :size="24"
+          :color="iconColor"
+          :class="{ 'is-rotated': isOpen }"
+        />
       </view>
-    </template>
+    </view>
 
     <!-- 下拉菜单 -->
     <view v-if="isOpen" class="md3-select__menu-overlay" @click="closeDropdown">
@@ -342,45 +291,34 @@ export default {
   width: 100%;
 }
 
-// 容器基础样式
+// 容器基础样式 - 与 input 样式统一
 .md3-select__container {
   display: flex;
   align-items: center;
-  min-height: 56px;
+  width: 100%;
+  height: 88rpx;
   padding: 0 $uni-md-space-md;
+  background-color: $uni-md-surface;
+  border: 1px solid $uni-md-border;
+  border-radius: $uni-md-radius-medium;
+  box-sizing: border-box;
   cursor: pointer;
-  transition: all $uni-md-animation-fast ease;
+  transition: border-color $uni-md-animation-fast ease;
 
-  &--filled {
-    background-color: $uni-md-surface-variant;
-    border-radius: $uni-md-radius-small $uni-md-radius-small 0 0;
-    border-bottom: 1px solid $uni-md-border;
-
-    &:hover:not(.is-disabled) {
-      background-color: darken($uni-md-surface-variant, 3%);
-    }
-
-    .md3-select.is-open & {
-      border-bottom-color: $uni-md-color-primary;
-      border-bottom-width: 2px;
-    }
-
-    .md3-select.is-error & {
-      border-bottom-color: #B3261E;
-    }
+  &:hover:not(.is-disabled) {
+    border-color: $uni-md-text-primary;
   }
 
-  &--outlined {
-    background-color: transparent;
-    border-radius: $uni-md-radius-small;
+  .md3-select.is-open & {
+    border-color: $uni-md-color-primary;
+  }
 
-    &:hover:not(.is-disabled) {
-      .md3-select__outline-leading,
-      .md3-select__outline-notch,
-      .md3-select__outline-trailing {
-        border-color: $uni-md-text-primary;
-      }
-    }
+  .md3-select.is-error & {
+    border-color: #B3261E;
+  }
+
+  &.with-icon {
+    padding-left: 80rpx;
   }
 }
 
@@ -408,43 +346,22 @@ export default {
   }
 }
 
-// 前缀图标
+// 前缀图标 - 与 input 图标位置统一
 .md3-select__prefix {
+  position: absolute;
+  left: $uni-md-space-md;
   display: flex;
   align-items: center;
-  margin-right: $uni-md-space-md;
   flex-shrink: 0;
-}
-
-// 文本区域
-.md3-select__text-field {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-width: 0;
-  position: relative;
-  height: 48px;
-}
-
-// 标签
-.md3-select__label {
-  font-size: $uni-font-size-base;
-  color: $uni-md-text-secondary;
-  transition: all $uni-md-animation-fast ease;
-  transform-origin: left top;
-
-  &.is-floating {
-    font-size: 12px;
-    transform: translateY(-10px);
-  }
 }
 
 // 值文本
 .md3-select__value {
+  flex: 1;
   font-size: $uni-font-size-base;
   color: $uni-md-text-primary;
   line-height: 1.5;
+  text-align: left;
 
   &.is-placeholder {
     color: $uni-md-text-tertiary;
@@ -462,53 +379,6 @@ export default {
     transform: rotate(180deg);
     transition: transform $uni-md-animation-fast ease;
   }
-}
-
-// Outlined 边框
-.md3-select__outline {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  pointer-events: none;
-}
-
-.md3-select__outline-leading,
-.md3-select__outline-trailing {
-  border: 1px solid $uni-md-border;
-  transition: border-color $uni-md-animation-fast ease;
-}
-
-.md3-select__outline-leading {
-  width: 12px;
-  border-right: none;
-  border-radius: $uni-md-radius-small 0 0 $uni-md-radius-small;
-}
-
-.md3-select__outline-trailing {
-  flex: 1;
-  border-left: none;
-  border-radius: 0 $uni-md-radius-small $uni-md-radius-small 0;
-}
-
-.md3-select__outline-notch {
-  border-top: 1px solid $uni-md-border;
-  border-bottom: 1px solid $uni-md-border;
-  transition: border-color $uni-md-animation-fast ease;
-  padding: 0 4px;
-
-  &.is-floating {
-    border-top: none;
-  }
-}
-
-.md3-select__outline-label {
-  font-size: 12px;
-  color: $uni-md-text-secondary;
-  padding: 0 4px;
-  transform: translateY(-50%);
 }
 
 // 下拉菜单遮罩
