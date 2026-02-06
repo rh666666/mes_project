@@ -2,24 +2,33 @@
   <view class="page">
     <view class="content">
       <!-- 用户信息卡片 -->
-      <view class="user-card" @click="onUserCardClick">
-        <image
-          v-if="userInfo.avatar"
-          class="user-avatar-img"
-          :src="getAvatarUrl(userInfo.avatar)"
-          mode="aspectFill"
-        />
-        <view v-else class="user-avatar">
-          <text class="avatar-text">{{ displayName.charAt(0).toUpperCase() }}</text>
-        </view>
-        <view class="user-info">
-          <text class="user-name">{{ displayName }}</text>
-          <text class="user-role">{{ displayRole }}</text>
-        </view>
-        <view class="user-arrow" v-if="!isLoggedIn">
-          <text class="arrow-icon">></text>
-        </view>
-      </view>
+      <Card
+        class="profile-user-card"
+        variant="elevated"
+        :clickable="true"
+        @click="onUserCardClick"
+      >
+        <template #header>
+          <view class="profile-user-card__header">
+            <image
+              v-if="userInfo.avatar"
+              class="profile-user-card__avatar"
+              :src="getAvatarUrl(userInfo.avatar)"
+              mode="aspectFill"
+            />
+            <view v-else class="profile-user-card__avatar profile-user-card__avatar--placeholder">
+              <text class="profile-user-card__avatar-text">{{ displayName.charAt(0).toUpperCase() }}</text>
+            </view>
+            <view class="profile-user-card__info">
+              <text class="profile-user-card__name">{{ displayName }}</text>
+              <text class="profile-user-card__role">{{ displayRole }}</text>
+            </view>
+            <view v-if="!isLoggedIn" class="profile-user-card__arrow">
+              <MdIcon type="chevron_right" :size="24" :color="iconColor" />
+            </view>
+          </view>
+        </template>
+      </Card>
 
       <!-- 功能菜单 -->
       <List class="menu-list-wrapper">
@@ -77,6 +86,8 @@
   import List from '@/components/ui/md3/List.vue';
   import ListItem from '@/components/ui/md3/ListItem.vue';
   import Dialog from '@/components/ui/md3/Dialog.vue';
+  import Card from '@/components/ui/md3/Card.vue';
+  import MdIcon from '@/components/ui/MdIcon.vue';
   import authApi from '@/api/auth.js';
   import { getStorageKey, getApiBaseURL } from '@/config/index.js';
 
@@ -84,7 +95,9 @@
     components: {
       List,
       ListItem,
-      Dialog
+      Dialog,
+      Card,
+      MdIcon
     },
     data() {
       return {
@@ -113,6 +126,9 @@
       displayRole() {
         if (!this.isLoggedIn) return '请点击登录';
         return this.userInfo.signature || '已登录';
+      },
+      iconColor() {
+        return '#6E6E73';
       }
     },
     onShow() {
@@ -251,46 +267,45 @@
     padding: $uni-md-space-md;
   }
 
-  .user-card {
-    display: flex;
-    align-items: center;
-    background-color: $uni-md-surface;
-    border-radius: $uni-md-radius-large;
-    padding: $uni-md-space-xl;
+  .profile-user-card {
     margin-bottom: $uni-md-space-lg;
-    box-shadow: $uni-md-shadow-sm;
+
+    :deep(.md3-card__header) {
+      padding: $uni-md-space-xl;
+    }
   }
 
-  .user-avatar {
+  .profile-user-card__header {
+    display: flex;
+    align-items: center;
+    gap: $uni-md-space-lg;
+  }
+
+  .profile-user-card__avatar {
     width: 120rpx;
     height: 120rpx;
     border-radius: 50%;
+    background-color: $uni-md-surface;
+  }
+
+  .profile-user-card__avatar--placeholder {
     background-color: $uni-md-color-primary;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-right: $uni-md-space-lg;
   }
 
-  .user-avatar-img {
-    width: 120rpx;
-    height: 120rpx;
-    border-radius: 50%;
-    margin-right: $uni-md-space-lg;
-    background-color: $uni-md-surface;
-  }
-
-  .avatar-text {
+  .profile-user-card__avatar-text {
     font-size: $uni-font-size-lg;
     color: $uni-md-surface;
     font-weight: 500;
   }
 
-  .user-info {
+  .profile-user-card__info {
     flex: 1;
   }
 
-  .user-name {
+  .profile-user-card__name {
     display: block;
     font-size: $uni-font-size-lg;
     font-weight: 600;
@@ -298,19 +313,14 @@
     margin-bottom: $uni-md-space-xs;
   }
 
-  .user-role {
+  .profile-user-card__role {
     display: block;
     font-size: $uni-font-size-base;
     color: $uni-md-text-secondary;
   }
 
-  .user-arrow {
+  .profile-user-card__arrow {
     padding: $uni-md-space-sm;
-  }
-
-  .arrow-icon {
-    font-size: $uni-font-size-lg;
-    color: $uni-md-text-tertiary;
   }
 
   .logout-section {
