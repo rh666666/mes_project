@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'drf_spectacular',
     'system',
+    'mes',
 ]
 
 MIDDLEWARE = [
@@ -153,6 +154,9 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
     'COMPONENT_SPLIT_REQUEST': True,
+    'ENUM_NAME_OVERRIDES': {
+        'DeviceStatusEnum': 'mes.models.devices.Device.Status',
+    },
 }
 
 # JWT 配置

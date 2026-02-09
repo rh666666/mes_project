@@ -1,4 +1,4 @@
-"""用户模型模块"""
+"""系统模型模块"""
 
 import uuid
 from pathlib import Path
@@ -117,6 +117,9 @@ class User(AbstractUser, CoreModel):
         verbose_name = "用户"
         verbose_name_plural = "用户"
 
+    def __str__(self):
+        return f"{self.username} - {self.name}"
+
     def save(self, *args, **kwargs):
         if self.name and not self.first_name:
             parts = self.name.split(" ", 1)
@@ -132,6 +135,9 @@ class Dept(CoreModel):
     code = models.CharField(max_length=100, verbose_name="部门编码", unique=True)
     name = models.CharField(max_length=100, verbose_name="部门名称")
     parent = models.ForeignKey("self", related_name="children", on_delete=models.SET_NULL, null=True, blank=True, verbose_name="父级部门")
+
+    def __str__(self):
+        return self.name
 
     class Meta:
         verbose_name = "部门"

@@ -8,6 +8,7 @@ import uuid
 
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.db import transaction
+from django.db.models import Q
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -229,7 +230,7 @@ class DeptViewSet(viewsets.ViewSet):
     @extend_schema(
         summary="获取部门列表",
         description="获取部门列表，支持分页和按名称过滤",
-        request=DeptListRequestSerializer,
+        parameters=[DeptListRequestSerializer],
         responses={
             200: OpenApiResponse(response=DeptListResponseSerializer, description="获取成功"),
             400: OpenApiResponse(response=ErrorResponseSerializer, description="参数错误"),
@@ -254,7 +255,7 @@ class DeptViewSet(viewsets.ViewSet):
         limit = serializer.validated_data.get("limit", 10)
         name_filter = serializer.validated_data.get("name")
 
-        queryset = Dept.objects.all().order_by("-create_datetime")
+        queryset = Dept.objects.all().order_by("id")
 
         if name_filter:
             queryset = queryset.filter(name__icontains=name_filter)
@@ -569,7 +570,7 @@ class UserViewSet(viewsets.ViewSet):
     @extend_schema(
         summary="获取用户列表",
         description="管理员可获取用户列表，支持分页和过滤",
-        request=UserListRequestSerializer,
+        parameters=[UserListRequestSerializer],
         responses={
             200: OpenApiResponse(response=UserListResponseSerializer, description="获取成功"),
             400: OpenApiResponse(response=ErrorResponseSerializer, description="参数错误"),
@@ -592,16 +593,18 @@ class UserViewSet(viewsets.ViewSet):
 
         page = serializer.validated_data.get("page", 1)
         limit = serializer.validated_data.get("limit", 10)
-        username_filter = serializer.validated_data.get("username")
+        search_filter = serializer.validated_data.get("search")
         role_filter = serializer.validated_data.get("role")
         dept_filter = serializer.validated_data.get("dept")
 
         User = get_user_model()
-        queryset = User.objects.all().order_by("-create_datetime")
+        queryset = User.objects.all().order_by("id")
 
         # 应用过滤条件
-        if username_filter:
-            queryset = queryset.filter(username__icontains=username_filter)
+        if search_filter:
+            queryset = queryset.filter(
+                Q(username__icontains=search_filter) | Q(name__icontains=search_filter)
+            )
         if role_filter:
             queryset = queryset.filter(role=role_filter)
         if dept_filter:

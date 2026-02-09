@@ -232,7 +232,7 @@ class UserListRequestSerializer(serializers.Serializer):
 
     page = serializers.IntegerField(required=False, default=1, min_value=1, help_text="页码")
     limit = serializers.IntegerField(required=False, default=10, min_value=1, max_value=100, help_text="每页数量")
-    username = serializers.CharField(required=False, help_text="用户名过滤")
+    search = serializers.CharField(required=False, help_text="搜索关键词(用户名或姓名)")
     role = serializers.CharField(required=False, help_text="角色过滤")
     dept = serializers.IntegerField(required=False, help_text="部门ID过滤")
 
