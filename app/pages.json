@@ -1,4 +1,10 @@
 {
+	"easycom": {
+		"autoscan": true,
+		"custom": {
+			"^wd-(.*)": "wot-design-uni/components/wd-$1/wd-$1.vue"
+		}
+	},
 	"pages": [
 		{
 			"path": "pages/index/index",
@@ -31,15 +37,39 @@
 			}
 		},
 		{
-			"path": "pages/admin/user-management",
+			"path": "pages/admin/user/index",
 			"style": {
 				"navigationBarTitleText": "用户管理"
 			}
 		},
 		{
-			"path": "pages/admin/dept-management",
+			"path": "pages/admin/dept/index",
 			"style": {
 				"navigationBarTitleText": "部门管理"
+			}
+		},
+		{
+			"path": "pages/admin/device/index",
+			"style": {
+				"navigationBarTitleText": "设备管理"
+			}
+		},
+		{
+			"path": "pages/admin/device/edit",
+			"style": {
+				"navigationBarTitleText": "编辑设备"
+			}
+		},
+		{
+			"path": "pages/admin/dept/edit",
+			"style": {
+				"navigationBarTitleText": "编辑部门"
+			}
+		},
+		{
+			"path": "pages/admin/user/edit",
+			"style": {
+				"navigationBarTitleText": "编辑用户"
 			}
 		}
 	],

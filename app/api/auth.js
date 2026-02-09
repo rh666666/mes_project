@@ -274,15 +274,25 @@ const authApi = {
 
   /**
    * 获取用户列表（管理员专属）
+   * @param {Object} [params] - 查询参数
+   * @param {string} [params.search] - 搜索关键词（用户名或姓名）
+   * @param {string} [params.role] - 角色过滤
+   * @param {number} [params.dept] - 部门ID过滤
+   * @param {number} [params.page] - 页码
+   * @param {number} [params.limit] - 每页数量
    * @returns {Promise<UserListResponse>} 返回用户列表的Promise
    * @example
    * authApi.getUserList()
    *   .then(res => console.log(res.data))
+   * @example
+   * authApi.getUserList({ search: '张三', role: 'admin', dept: 1 })
+   *   .then(res => console.log(res.data))
    */
-  getUserList() {
+  getUserList(params = {}) {
     return request({
       url: '/api/auth/users/',
-      method: 'GET'
+      method: 'GET',
+      data: params
     })
   },
 

@@ -64,15 +64,23 @@ import request from './request.js'
 const deptApi = {
   /**
    * 获取部门列表
+   * @param {Object} [params] - 查询参数
+   * @param {string} [params.name] - 部门名称过滤
+   * @param {number} [params.page] - 页码
+   * @param {number} [params.limit] - 每页数量
    * @returns {Promise<DeptListResponse>} 返回部门列表的Promise
    * @example
    * deptApi.getDeptList()
    *   .then(res => console.log(res.data))
+   * @example
+   * deptApi.getDeptList({ name: '研发' })
+   *   .then(res => console.log(res.data))
    */
-  getDeptList() {
+  getDeptList(params = {}) {
     return request({
       url: '/api/auth/depts/',
-      method: 'GET'
+      method: 'GET',
+      data: params
     })
   },
 

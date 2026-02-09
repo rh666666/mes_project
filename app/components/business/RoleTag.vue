@@ -1,64 +1,66 @@
 <template>
-  <Tag :text="displayText" :variant="variant" :size="size" />
+  <wd-tag :type="tagType" :size="size">{{ displayText }}</wd-tag>
 </template>
 
-<script setup lang="ts">
+<script>
 /**
  * 角色标签组件
  * 用于展示用户角色，如管理员、普通用户等
- * 基于 Tag 组件封装
+ * 基于 wd-tag 组件封装
  */
 
-import { computed } from 'vue'
-import Tag from '@/components/ui/Tag.vue'
+export default {
+  name: 'RoleTag',
 
-type UserRole = 'admin' | 'user' | 'vip' | 'guest' | string
-type TagSize = 'small' | 'medium' | 'large'
+  props: {
+    /** 角色类型 */
+    role: {
+      type: String,
+      required: true
+    },
+    /** 尺寸 */
+    size: {
+      type: String,
+      default: 'medium'
+    },
+    /** 自定义显示文本 */
+    customText: {
+      type: String,
+      default: ''
+    }
+  },
 
-interface Props {
-  /** 角色类型 */
-  role: UserRole
-  /** 尺寸 */
-  size?: TagSize
-  /** 自定义显示文本 */
-  customText?: string
-}
+  computed: {
+    /**
+     * 角色显示文本映射
+     * @returns {string}
+     */
+    displayText() {
+      if (this.customText) {
+        return this.customText
+      }
+      const roleTextMap = {
+        admin: '管理员',
+        user: '普通用户',
+        vip: 'VIP用户',
+        guest: '访客'
+      }
+      return roleTextMap[this.role] || this.role
+    },
 
-const props = withDefaults(defineProps<Props>(), {
-  size: 'medium',
-  customText: ''
-})
-
-/**
- * 角色显示文本映射
- */
-const roleTextMap: Record<string, string> = {
-  admin: '管理员',
-  user: '普通用户',
-  vip: 'VIP用户',
-  guest: '访客'
-}
-
-/**
- * 计算显示文本
- */
-const displayText = computed(() => {
-  if (props.customText) {
-    return props.customText
+    /**
+     * 角色对应的标签类型
+     * @returns {string}
+     */
+    tagType() {
+      const typeMap = {
+        admin: 'danger',
+        user: 'primary',
+        vip: 'warning',
+        guest: 'default'
+      }
+      return typeMap[this.role] || 'default'
+    }
   }
-  return roleTextMap[props.role] || props.role
-})
-
-/**
- * 角色对应的标签变体
- */
-const variant = computed(() => {
-  const variantMap: Record<string, string> = {
-    admin: 'error',
-    user: 'primary',
-    vip: 'warning',
-    guest: 'default'
-  }
-  return variantMap[props.role] || 'default'
-})
+}
 </script>

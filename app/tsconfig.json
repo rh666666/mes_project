@@ -15,7 +15,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"]
-    }
+    },
+    "types": ["wot-design-uni/global"]
   },
   "include": ["**/*.ts", "**/*.vue"],
   "exclude": ["node_modules", "dist", "unpackage"]

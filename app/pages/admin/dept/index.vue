@@ -1,0 +1,283 @@
+<template>
+  <view class="page">
+    <!-- 搜索区域 -->
+    <view class="filter-section">
+      <wd-search
+        v-model="searchKeyword"
+        placeholder="搜索部门名称"
+        @search="onSearch"
+        @clear="onClearSearch"
+      />
+
+      <!-- 结果统计 -->
+      <view v-if="!isLoading" class="results-stats">
+        <text class="stats-text">共 {{ deptList.length }} 个部门</text>
+        <wd-tag v-if="searchKeyword" type="primary" size="small">已筛选</wd-tag>
+      </view>
+    </view>
+
+    <!-- 部门列表 -->
+    <scroll-view
+      scroll-y
+      class="dept-list"
+      refresher-enabled
+      :refresher-triggered="isRefreshing"
+      @refresherrefresh="onRefresh"
+      @scrolltolower="onLoadMore"
+    >
+      <wd-cell-group>
+        <wd-cell
+          v-for="(dept, index) in deptList"
+          :key="dept.id"
+          :title="dept.name"
+          :label="dept.code"
+          clickable
+          @click="onDeptClick(dept)"
+        >
+          <template #value>
+            <wd-tag v-if="dept.parent" type="primary" size="small">子部门</wd-tag>
+          </template>
+        </wd-cell>
+      </wd-cell-group>
+
+      <wd-loadmore :state="loadMoreState" />
+
+      <wd-status-tip v-if="deptList.length === 0 && !isLoading" image="search" tip="暂无部门数据" />
+    </scroll-view>
+
+    <!-- 加载状态 -->
+    <wd-loading v-if="isLoading" class="loading-overlay" />
+
+    <!-- FAB 按钮 -->
+    <wd-fab class="fab-container" @click="onCreateDept">
+      <wd-icon name="add" size="24" color="#fff" />
+    </wd-fab>
+  </view>
+</template>
+
+<script>
+import deptApi from '@/api/dept.js'
+
+/**
+ * 部门管理页面（管理员专属）
+ * @description 提供部门列表查看、创建、编辑和删除功能，点击跳转到独立编辑页面
+ */
+export default {
+  data() {
+    return {
+      /** @type {Array} 部门列表 */
+      deptList: [],
+      /** @type {boolean} 是否正在加载 */
+      isLoading: false,
+      /** @type {boolean} 是否正在刷新 */
+      isRefreshing: false,
+      /** @type {boolean} 是否正在加载更多 */
+      isLoadingMore: false,
+      /** @type {string} 搜索关键词 */
+      searchKeyword: '',
+      /** @type {number|null} 搜索防抖定时器 */
+      searchDebounceTimer: null,
+      /** @type {number} 当前页码 */
+      currentPage: 1,
+      /** @type {number} 每页数量 */
+      pageSize: 10,
+      /** @type {number} 总数量 */
+      total: 0,
+      /** @type {boolean} 是否还有更多数据 */
+      hasMore: true
+    }
+  },
+
+  computed: {
+    /**
+     * 加载更多状态
+     * @returns {string}
+     */
+    loadMoreState() {
+      if (this.isLoadingMore) return 'loading'
+      if (!this.hasMore && this.deptList.length > 0) return 'finished'
+      return 'default'
+    }
+  },
+
+  onLoad() {
+    this.loadDeptList()
+  },
+
+  onUnload() {
+    if (this.searchDebounceTimer) {
+      clearTimeout(this.searchDebounceTimer)
+    }
+  },
+
+  methods: {
+    /**
+     * 加载部门列表
+     * @async
+     * @param {boolean} [isLoadMore=false] - 是否是加载更多
+     */
+    async loadDeptList(isLoadMore = false) {
+      if (isLoadMore) {
+        this.isLoadingMore = true
+      } else {
+        this.isLoading = true
+        this.currentPage = 1
+        this.hasMore = true
+      }
+
+      try {
+        const params = {
+          page: this.currentPage,
+          limit: this.pageSize
+        }
+        if (this.searchKeyword) {
+          params.name = this.searchKeyword
+        }
+
+        const res = await deptApi.getDeptList(params)
+        if (res.code === 2000) {
+          const newData = res.data || []
+          this.total = res.total || 0
+
+          if (isLoadMore) {
+            this.deptList = [...this.deptList, ...newData]
+          } else {
+            this.deptList = newData
+          }
+
+          this.hasMore = this.deptList.length < this.total
+        } else {
+          uni.showToast({
+            title: res.msg || '获取部门列表失败',
+            icon: 'none'
+          })
+        }
+      } catch (error) {
+        console.error('获取部门列表失败:', error)
+        uni.showToast({
+          title: error.msg || '获取部门列表失败',
+          icon: 'none'
+        })
+      } finally {
+        this.isLoading = false
+        this.isRefreshing = false
+        this.isLoadingMore = false
+      }
+    },
+
+    /**
+     * 刷新部门列表
+     */
+    onRefresh() {
+      this.isRefreshing = true
+      this.currentPage = 1
+      this.hasMore = true
+      this.loadDeptList(false)
+    },
+
+    /**
+     * 加载更多数据
+     */
+    async onLoadMore() {
+      if (!this.hasMore || this.isLoadingMore || this.isLoading) {
+        return
+      }
+      this.currentPage++
+      await this.loadDeptList(true)
+    },
+
+    /**
+     * 搜索处理（防抖）
+     */
+    onSearch() {
+      if (this.searchDebounceTimer) {
+        clearTimeout(this.searchDebounceTimer)
+      }
+      this.searchDebounceTimer = setTimeout(() => {
+        this.loadDeptList()
+      }, 300)
+    },
+
+    /**
+     * 清除搜索
+     */
+    onClearSearch() {
+      this.searchKeyword = ''
+      this.loadDeptList()
+    },
+
+    /**
+     * 点击创建部门按钮 - 跳转到创建页面
+     */
+    onCreateDept() {
+      uni.navigateTo({
+        url: '/pages/admin/dept/edit'
+      })
+    },
+
+    /**
+     * 点击部门项 - 跳转到编辑页面
+     * @param {Object} dept - 部门对象
+     */
+    onDeptClick(dept) {
+      uni.navigateTo({
+        url: `/pages/admin/dept/edit?id=${dept.id}`
+      })
+    }
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: $uni-bg-color;
+}
+
+.filter-section {
+  padding: 24rpx;
+  background-color: $uni-bg-color-white;
+  border-bottom: 1px solid $uni-border-color;
+}
+
+.results-stats {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-top: 24rpx;
+  padding-top: 24rpx;
+  border-top: 1px solid $uni-border-color;
+}
+
+.stats-text {
+  font-size: 24rpx;
+  color: $uni-text-color-grey;
+}
+
+.dept-list {
+  flex: 1;
+  padding: 24rpx;
+}
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.8);
+  z-index: 1000;
+}
+
+.fab-container {
+  position: fixed;
+  right: 32rpx;
+  bottom: calc(32rpx + env(safe-area-inset-bottom));
+  z-index: 100;
+}
+</style>

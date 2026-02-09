@@ -62,7 +62,6 @@
 
 	/* 通用按钮样式 */
 	.btn {
-		@include uni-md-button;
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
@@ -72,38 +71,50 @@
 		outline: none;
 		cursor: pointer;
 		transition: all $uni-md-animation-fast ease;
+		padding: 24rpx 48rpx;
+		border-radius: $uni-md-radius-medium;
+		background-color: $uni-bg-color-grey;
+		color: $uni-text-color;
+		box-shadow: $uni-md-shadow-sm;
 	}
 
 	.btn-primary {
-		@include uni-md-button($uni-md-color-primary);
+		background-color: $uni-color-primary;
+		color: #fff;
 	}
 
 	.btn-secondary {
-		@include uni-md-button($uni-md-color-secondary);
+		background-color: $uni-color-success;
+		color: #fff;
 	}
 
 	.btn-outline {
 		background-color: transparent;
-		color: $uni-md-color-primary;
-		border: 1px solid $uni-md-color-primary;
+		color: $uni-color-primary;
+		border: 1px solid $uni-color-primary;
 		box-shadow: none;
 
 		&:hover {
-			background-color: rgba($uni-md-color-primary, 0.05);
+			background-color: rgba($uni-color-primary, 0.05);
 		}
 	}
 
 	/* 通用卡片样式 */
 	.card {
-		@include uni-md-card;
+		background-color: $uni-bg-color-white;
+		border-radius: $uni-md-radius-medium;
+		box-shadow: $uni-md-shadow-sm;
 		margin-bottom: $uni-md-space-md;
 	}
 
 	/* 通用输入框样式 */
 	.input {
-		@include uni-md-input;
 		width: 100%;
 		font-size: $uni-font-size-base;
+		padding: 24rpx;
+		border: 1px solid $uni-border-color;
+		border-radius: $uni-md-radius-medium;
+		background-color: $uni-bg-color-white;
 	}
 
 	/* 通用列表样式 */

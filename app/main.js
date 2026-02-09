@@ -1,7 +1,7 @@
 /**
  * 应用入口文件
  * @file main.js
- * @description uni-app应用的入口文件，负责初始化Vue实例
+ * @description uni-app应用的入口文件，负责初始化Vue实例和引入wot-ui组件库
  */
 
 import App from './App'
@@ -26,6 +26,7 @@ import { createSSRApp } from 'vue'
  */
 export function createApp() {
   const app = createSSRApp(App)
+  
   return {
     app
   }
