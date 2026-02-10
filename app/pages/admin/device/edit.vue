@@ -1,7 +1,11 @@
 <template>
   <view class="page">
     <view class="content">
-      <wd-form ref="form" :model="form">
+      <!-- 设备信息 -->
+      <view class="section-header">
+        <text class="section-title">基本信息</text>
+      </view>
+      <wd-cell-group>
         <wd-input
           v-model="form.code"
           label="设备编码"
@@ -9,7 +13,6 @@
           :maxlength="100"
           clearable
         />
-
         <wd-input
           v-model="form.name"
           label="设备名称"
@@ -17,9 +20,13 @@
           :maxlength="100"
           clearable
         />
-
-        <wd-cell title="设备状态" :value="getStatusLabel(form.status)" />
-      </wd-form>
+        <wd-input
+          v-if="!isCreating"
+          v-model="statusLabel"
+          label="设备状态"
+          disabled
+        />
+      </wd-cell-group>
     </view>
 
     <!-- 底部操作区 -->
@@ -68,6 +75,16 @@ export default {
     }
   },
 
+  computed: {
+    /**
+     * 状态显示文本
+     * @returns {string}
+     */
+    statusLabel() {
+      return DeviceStatusLabel[this.form.status] || this.form.status || '-'
+    }
+  },
+
   onLoad(options) {
     if (options.id) {
       this.isCreating = false
@@ -81,14 +98,6 @@ export default {
   },
 
   methods: {
-    /**
-     * 获取状态标签
-     * @param {string} status - 状态值
-     * @returns {string} 状态标签
-     */
-    getStatusLabel(status) {
-      return DeviceStatusLabel[status] || status
-    },
     /**
      * 加载设备详情
      * @async
@@ -161,9 +170,7 @@ export default {
             title: this.isCreating ? '创建成功' : '保存成功',
             icon: 'success'
           })
-          setTimeout(() => {
-            uni.navigateBack()
-          }, 1500)
+          uni.navigateBack()
         } else {
           uni.showToast({
             title: res.msg || (this.isCreating ? '创建失败' : '保存失败'),
@@ -213,9 +220,7 @@ export default {
             title: '删除成功',
             icon: 'success'
           })
-          setTimeout(() => {
-            uni.navigateBack()
-          }, 1500)
+          uni.navigateBack()
         } else {
           uni.showToast({
             title: res.msg || '删除失败',
@@ -250,6 +255,16 @@ export default {
   padding: 24rpx;
 }
 
+.section-header {
+  margin: 32rpx 0 24rpx;
+}
+
+.section-title {
+  font-size: 26rpx;
+  font-weight: 400;
+  color: $uni-text-color-grey;
+}
+
 .actions {
   padding: 24rpx;
   background-color: $uni-bg-color-white;
@@ -257,5 +272,9 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 24rpx;
+
+  :deep(.wd-button) {
+    width: 100%;
+  }
 }
 </style>

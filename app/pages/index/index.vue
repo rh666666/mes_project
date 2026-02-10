@@ -137,8 +137,8 @@ export default {
 }
 
 .section-title {
-  font-size: 32rpx;
-  font-weight: 600;
-  color: $uni-text-color;
+  font-size: 26rpx;
+  font-weight: 400;
+  color: $uni-text-color-grey;
 }
 </style>

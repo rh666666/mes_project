@@ -2,28 +2,33 @@
   <view class="page">
     <view class="content">
       <!-- 用户信息卡片 -->
-      <wd-cell-group title="基本信息">
-        <wd-cell title="用户名" :value="userInfo.username" />
-        <wd-cell title="昵称" :value="userInfo.name || '未设置'" />
-        <wd-cell title="邮箱" :value="userInfo.email || '未设置'" />
+      <view class="section-header">
+        <text class="section-title">基本信息</text>
+      </view>
+      <wd-cell-group>
+        <wd-input v-model="userInfo.username" label="用户名" disabled />
+        <wd-input v-model="userInfo.name" label="昵称" disabled />
+        <wd-input v-model="userInfo.email" label="邮箱" disabled />
       </wd-cell-group>
 
       <!-- 权限设置卡片 -->
-      <wd-cell-group title="权限设置">
+      <view class="section-header">
+        <text class="section-title">权限设置</text>
+      </view>
+      <wd-cell-group>
         <!-- 角色选择 -->
-        <view class="form-field">
-          <text class="field-label">角色</text>
-          <wd-radio-group v-model="form.role">
-            <wd-radio value="admin">管理员</wd-radio>
-            <wd-radio value="user">普通用户</wd-radio>
-          </wd-radio-group>
-        </view>
+        <wd-picker
+          v-model="form.role"
+          label="角色"
+          placeholder="选择角色"
+          :columns="roleColumns"
+        />
 
         <!-- 部门选择 -->
-        <wd-select-picker
+        <wd-picker
           v-model="form.dept"
           label="部门"
-          placeholder="请选择部门"
+          placeholder="选择部门"
           :columns="deptColumns"
         />
       </wd-cell-group>
@@ -74,11 +79,22 @@ export default {
 
   computed: {
     /**
+     * 角色选项列表
+     * @returns {Array}
+     */
+    roleColumns() {
+      return [
+        { value: 'admin', label: '管理员' },
+        { value: 'user', label: '普通用户' }
+      ]
+    },
+
+    /**
      * 部门选项列表
      * @returns {Array}
      */
     deptColumns() {
-      const columns = [{ value: null, label: '无部门' }]
+      const columns = [{ value: '', label: '无部门' }]
       this.deptList.forEach(dept => {
         columns.push({ value: dept.id, label: dept.name })
       })
@@ -126,7 +142,7 @@ export default {
       }
       this.form = {
         role: user.role || 'user',
-        dept: user.dept || null
+        dept: user.dept || ''
       }
     },
 
@@ -190,7 +206,7 @@ export default {
       try {
         const res = await authApi.adminUpdateUser(this.userId, {
           role: this.form.role,
-          dept: this.form.dept
+          dept: this.form.dept || null
         })
 
         if (res.code === 2000) {
@@ -198,9 +214,7 @@ export default {
             title: '保存成功',
             icon: 'success'
           })
-          setTimeout(() => {
-            uni.navigateBack()
-          }, 1500)
+          uni.navigateBack()
         } else {
           uni.showToast({
             title: res.msg || '保存失败',
@@ -235,21 +249,23 @@ export default {
   padding: 24rpx;
 }
 
-.form-field {
-  padding: 24rpx;
-  background-color: $uni-bg-color-white;
+.section-header {
+  margin: 32rpx 0 24rpx;
 }
 
-.field-label {
-  display: block;
-  font-size: 28rpx;
-  color: $uni-text-color;
-  margin-bottom: 16rpx;
+.section-title {
+  font-size: 26rpx;
+  font-weight: 400;
+  color: $uni-text-color-grey;
 }
 
 .actions {
   padding: 24rpx;
   background-color: $uni-bg-color-white;
   border-top: 1px solid $uni-border-color;
+
+  :deep(.wd-button) {
+    width: 100%;
+  }
 }
 </style>

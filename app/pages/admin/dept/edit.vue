@@ -1,7 +1,11 @@
 <template>
   <view class="page">
     <view class="content">
-      <wd-form ref="form" :model="form">
+      <!-- 部门信息 -->
+      <view class="section-header">
+        <text class="section-title">基本信息</text>
+      </view>
+      <wd-cell-group>
         <wd-input
           v-model="form.code"
           label="部门编码"
@@ -9,7 +13,6 @@
           :maxlength="100"
           clearable
         />
-
         <wd-input
           v-model="form.name"
           label="部门名称"
@@ -17,14 +20,13 @@
           :maxlength="100"
           clearable
         />
-
-        <wd-select-picker
+        <wd-picker
           v-model="form.parent"
           label="父级部门"
-          placeholder="请选择父级部门"
+          placeholder="选择父级部门"
           :columns="parentDeptColumns"
         />
-      </wd-form>
+      </wd-cell-group>
     </view>
 
     <!-- 底部操作区 -->
@@ -66,7 +68,7 @@ export default {
       form: {
         code: '',
         name: '',
-        parent: null
+        parent: ''
       },
       /** @type {boolean} 是否正在保存 */
       isSaving: false,
@@ -85,7 +87,7 @@ export default {
      * @returns {Array}
      */
     parentDeptColumns() {
-      const columns = [{ value: null, label: '无（顶级部门）' }]
+      const columns = [{ value: '', label: '无（顶级部门）' }]
       const availableDepts = this.isCreating
         ? this.deptList
         : this.deptList.filter(dept => dept.id !== this.deptId)
@@ -142,7 +144,7 @@ export default {
           this.form = {
             code: dept.code || '',
             name: dept.name || '',
-            parent: dept.parent || null
+            parent: dept.parent || ''
           }
         } else {
           uni.showToast({
@@ -188,7 +190,7 @@ export default {
         const data = {
           code: this.form.code.trim(),
           name: this.form.name.trim(),
-          parent: this.form.parent
+          parent: this.form.parent || null
         }
 
         if (this.isCreating) {
@@ -202,9 +204,7 @@ export default {
             title: this.isCreating ? '创建成功' : '保存成功',
             icon: 'success'
           })
-          setTimeout(() => {
-            uni.navigateBack()
-          }, 1500)
+          uni.navigateBack()
         } else {
           uni.showToast({
             title: res.msg || (this.isCreating ? '创建失败' : '保存失败'),
@@ -254,9 +254,7 @@ export default {
             title: '删除成功',
             icon: 'success'
           })
-          setTimeout(() => {
-            uni.navigateBack()
-          }, 1500)
+          uni.navigateBack()
         } else {
           uni.showToast({
             title: res.msg || '删除失败',
@@ -291,6 +289,16 @@ export default {
   padding: 24rpx;
 }
 
+.section-header {
+  margin: 32rpx 0 24rpx;
+}
+
+.section-title {
+  font-size: 26rpx;
+  font-weight: 400;
+  color: $uni-text-color-grey;
+}
+
 .actions {
   padding: 24rpx;
   background-color: $uni-bg-color-white;
@@ -298,5 +306,9 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 24rpx;
+
+  :deep(.wd-button) {
+    width: 100%;
+  }
 }
 </style>

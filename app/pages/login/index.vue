@@ -82,8 +82,10 @@ export default {
       this.formData.remember = false
     } else {
       const rememberedUsername = uni.getStorageSync('remember_username')
+      const rememberedPassword = uni.getStorageSync('remember_password')
       if (rememberedUsername) {
         this.formData.username = rememberedUsername
+        this.formData.password = rememberedPassword || ''
         this.formData.remember = true
       }
     }
@@ -150,8 +152,10 @@ export default {
 
           if (this.formData.remember) {
             uni.setStorageSync('remember_username', this.formData.username)
+            uni.setStorageSync('remember_password', this.formData.password)
           } else {
             uni.removeStorageSync('remember_username')
+            uni.removeStorageSync('remember_password')
           }
 
           setTimeout(() => {
@@ -213,6 +217,11 @@ export default {
   justify-content: center;
   padding: 48rpx;
   min-height: calc(100vh - env(safe-area-inset-bottom));
+
+  :deep(.wd-form) {
+    width: 100%;
+    max-width: 640rpx;
+  }
 }
 
 .input-group {

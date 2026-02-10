@@ -11,8 +11,8 @@
 
       <!-- 状态筛选 -->
       <view class="status-filter">
-        <wd-tabs v-model="selectedStatus" @change="onStatusChange">
-          <wd-tab title="全部" name="" />
+        <wd-tabs v-model="selectedStatus">
+          <wd-tab title="全部" name="all" />
           <wd-tab
             v-for="status in statusOptions"
             :key="status.value"
@@ -25,7 +25,7 @@
       <!-- 结果统计 -->
       <view v-if="!isLoading" class="results-stats">
         <text class="stats-text">共 {{ deviceList.length }} 台设备</text>
-        <wd-tag v-if="searchKeyword || selectedStatus" type="primary" size="small">已筛选</wd-tag>
+        <wd-tag v-if="searchKeyword || (selectedStatus && selectedStatus !== 'all')" type="primary" size="small">已筛选</wd-tag>
       </view>
     </view>
 
@@ -33,10 +33,11 @@
     <scroll-view
       scroll-y
       class="device-list"
-      refresher-enabled
+      :refresher-enabled="scrollTop <= 10"
       :refresher-triggered="isRefreshing"
       @refresherrefresh="onRefresh"
       @scrolltolower="onLoadMore"
+      @scroll="onScroll"
     >
       <wd-cell-group>
         <wd-cell
@@ -65,12 +66,16 @@
     </scroll-view>
 
     <!-- 加载状态 -->
-    <wd-loading v-if="isLoading" class="loading-overlay" />
+    <view v-if="isLoading || isRefreshing" class="loading-overlay">
+      <wd-loading />
+    </view>
 
     <!-- FAB 按钮 -->
-    <wd-fab class="fab-container" @click="onCreateDevice">
-      <wd-icon name="add" size="24" color="#fff" />
-    </wd-fab>
+    <view class="fab-container" @click="onCreateDevice">
+      <wd-button round type="primary">
+        <wd-icon name="add" size="24" color="#fff" />
+      </wd-button>
+    </view>
   </view>
 </template>
 
@@ -106,7 +111,7 @@ export default {
       /** @type {string} 搜索关键词 */
       searchKeyword: '',
       /** @type {string} 选中的状态筛选 */
-      selectedStatus: '',
+      selectedStatus: 'all',
       /** @type {number|null} 搜索防抖定时器 */
       searchDebounceTimer: null,
       /** @type {number} 当前页码 */
@@ -117,6 +122,8 @@ export default {
       total: 0,
       /** @type {boolean} 是否还有更多数据 */
       hasMore: true,
+      /** @type {number} 滚动位置 */
+      scrollTop: 0,
       /** @type {Array} 状态选项列表 */
       statusOptions: [
         { value: DeviceStatus.IDLE, label: DeviceStatusLabel[DeviceStatus.IDLE] },
@@ -135,6 +142,17 @@ export default {
       if (this.isLoadingMore) return 'loading'
       if (!this.hasMore && this.deviceList.length > 0) return 'finished'
       return 'default'
+    }
+  },
+
+  watch: {
+    /**
+     * 监听状态筛选变化
+     */
+    selectedStatus(newVal, oldVal) {
+      if (newVal !== oldVal) {
+        this.loadDeviceList()
+      }
     }
   },
 
@@ -189,7 +207,7 @@ export default {
         if (this.searchKeyword) {
           params.name = this.searchKeyword
         }
-        if (this.selectedStatus) {
+        if (this.selectedStatus && this.selectedStatus !== 'all') {
           params.status = this.selectedStatus
         }
 
@@ -266,15 +284,6 @@ export default {
     },
 
     /**
-     * 状态筛选变化
-     * @param {string} status - 选中的状态
-     */
-    onStatusChange(status) {
-      this.selectedStatus = status
-      this.loadDeviceList()
-    },
-
-    /**
      * 点击创建设备按钮 - 跳转到创建页面
      */
     onCreateDevice() {
@@ -291,6 +300,14 @@ export default {
       uni.navigateTo({
         url: `/pages/admin/device/edit?id=${device.id}`
       })
+    },
+
+    /**
+     * 滚动事件处理
+     * @param {Object} e - 滚动事件对象
+     */
+    onScroll(e) {
+      this.scrollTop = e.detail.scrollTop
     }
   }
 }
@@ -308,6 +325,9 @@ export default {
   padding: 24rpx;
   background-color: $uni-bg-color-white;
   border-bottom: 1px solid $uni-border-color;
+  position: sticky;
+  top: var(--window-top, 0);
+  z-index: 100;
 }
 
 .status-filter {
@@ -330,7 +350,7 @@ export default {
 
 .device-list {
   flex: 1;
-  padding: 24rpx;
+  overflow-y: auto;
 }
 
 .loading-overlay {
@@ -351,6 +371,15 @@ export default {
   right: 32rpx;
   bottom: calc(32rpx + env(safe-area-inset-bottom));
   z-index: 100;
+
+  :deep(.wd-button) {
+    min-width: 96rpx !important;
+    max-width: 96rpx !important;
+    width: 96rpx !important;
+    height: 96rpx !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+  }
 }
 
 </style>

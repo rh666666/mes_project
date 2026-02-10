@@ -228,6 +228,11 @@ export default {
   justify-content: center;
   padding: 48rpx;
   min-height: calc(100vh - env(safe-area-inset-bottom));
+
+  :deep(.wd-form) {
+    width: 100%;
+    max-width: 640rpx;
+  }
 }
 
 .input-group {

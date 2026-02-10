@@ -20,10 +20,11 @@
     <scroll-view
       scroll-y
       class="dept-list"
-      refresher-enabled
+      :refresher-enabled="scrollTop <= 10"
       :refresher-triggered="isRefreshing"
       @refresherrefresh="onRefresh"
       @scrolltolower="onLoadMore"
+      @scroll="onScroll"
     >
       <wd-cell-group>
         <wd-cell
@@ -46,12 +47,16 @@
     </scroll-view>
 
     <!-- 加载状态 -->
-    <wd-loading v-if="isLoading" class="loading-overlay" />
+    <view v-if="isLoading || isRefreshing" class="loading-overlay">
+      <wd-loading />
+    </view>
 
     <!-- FAB 按钮 -->
-    <wd-fab class="fab-container" @click="onCreateDept">
-      <wd-icon name="add" size="24" color="#fff" />
-    </wd-fab>
+    <view class="fab-container" @click="onCreateDept">
+      <wd-button round type="primary">
+        <wd-icon name="add" size="24" color="#fff" />
+      </wd-button>
+    </view>
   </view>
 </template>
 
@@ -84,7 +89,9 @@ export default {
       /** @type {number} 总数量 */
       total: 0,
       /** @type {boolean} 是否还有更多数据 */
-      hasMore: true
+      hasMore: true,
+      /** @type {number} 滚动位置 */
+      scrollTop: 0
     }
   },
 
@@ -223,6 +230,14 @@ export default {
       uni.navigateTo({
         url: `/pages/admin/dept/edit?id=${dept.id}`
       })
+    },
+
+    /**
+     * 滚动事件处理
+     * @param {Object} e - 滚动事件对象
+     */
+    onScroll(e) {
+      this.scrollTop = e.detail.scrollTop
     }
   }
 }
@@ -240,6 +255,9 @@ export default {
   padding: 24rpx;
   background-color: $uni-bg-color-white;
   border-bottom: 1px solid $uni-border-color;
+  position: sticky;
+  top: var(--window-top, 0);
+  z-index: 100;
 }
 
 .results-stats {
@@ -258,7 +276,7 @@ export default {
 
 .dept-list {
   flex: 1;
-  padding: 24rpx;
+  overflow-y: auto;
 }
 
 .loading-overlay {
@@ -279,5 +297,14 @@ export default {
   right: 32rpx;
   bottom: calc(32rpx + env(safe-area-inset-bottom));
   z-index: 100;
+
+  :deep(.wd-button) {
+    min-width: 96rpx !important;
+    max-width: 96rpx !important;
+    width: 96rpx !important;
+    height: 96rpx !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+  }
 }
 </style>

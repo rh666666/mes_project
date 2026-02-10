@@ -11,20 +11,16 @@
 
       <!-- 筛选器行 -->
       <view class="filter-row">
-        <wd-select-picker
+        <wd-picker
           v-model="filterRole"
-          label="角色"
-          placeholder="全部角色"
+          placeholder="选择角色"
           :columns="roleColumns"
-          type="radio"
           @confirm="onFilterChange"
         />
-        <wd-select-picker
+        <wd-picker
           v-model="filterDept"
-          label="部门"
-          placeholder="全部部门"
+          placeholder="选择部门"
           :columns="deptColumns"
-          type="radio"
           @confirm="onFilterChange"
         />
       </view>
@@ -40,10 +36,11 @@
     <scroll-view
       scroll-y
       class="user-list"
-      refresher-enabled
+      :refresher-enabled="scrollTop <= 10"
       :refresher-triggered="isRefreshing"
       @refresherrefresh="onRefresh"
       @scrolltolower="onLoadMore"
+      @scroll="onScroll"
     >
       <wd-cell-group>
         <wd-cell
@@ -77,7 +74,9 @@
     </scroll-view>
 
     <!-- 加载状态 -->
-    <wd-loading v-if="isLoading" class="loading-overlay" />
+    <view v-if="isLoading || isRefreshing" class="loading-overlay">
+      <wd-loading />
+    </view>
   </view>
 </template>
 
@@ -118,7 +117,9 @@ export default {
       /** @type {number} 总数量 */
       total: 0,
       /** @type {boolean} 是否还有更多数据 */
-      hasMore: true
+      hasMore: true,
+      /** @type {number} 滚动位置 */
+      scrollTop: 0
     }
   },
 
@@ -338,6 +339,14 @@ export default {
           res.eventChannel.emit('userData', { user })
         }
       })
+    },
+
+    /**
+     * 滚动事件处理
+     * @param {Object} e - 滚动事件对象
+     */
+    onScroll(e) {
+      this.scrollTop = e.detail.scrollTop
     }
   }
 }
@@ -355,12 +364,33 @@ export default {
   padding: 24rpx;
   background-color: $uni-bg-color-white;
   border-bottom: 1px solid $uni-border-color;
+  position: sticky;
+  top: var(--window-top, 0);
+  z-index: 100;
 }
 
 .filter-row {
   display: flex;
   gap: 24rpx;
   margin-top: 24rpx;
+
+  /* 让 wd-picker 在一行显示，居左对齐 */
+  :deep(.wd-picker) {
+    flex: none;
+    width: auto;
+    min-width: 200rpx;
+  }
+
+  :deep(.wd-picker__label) {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  :deep(.wd-picker__value) {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 
 .results-stats {
@@ -379,7 +409,7 @@ export default {
 
 .user-list {
   flex: 1;
-  padding: 24rpx;
+  overflow-y: auto;
 }
 
 .loading-overlay {
