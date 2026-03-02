@@ -71,6 +71,18 @@
 			"style": {
 				"navigationBarTitleText": "编辑用户"
 			}
+		},
+		{
+			"path": "pages/admin/skill/index",
+			"style": {
+				"navigationBarTitleText": "技能管理"
+			}
+		},
+		{
+			"path": "pages/admin/skill/edit",
+			"style": {
+				"navigationBarTitleText": "编辑技能"
+			}
 		}
 	],
 	"globalStyle": {
