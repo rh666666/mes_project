@@ -4,5 +4,6 @@
 """
 
 from .device import DeviceViewSet
+from .skill import DeviceSkillViewSet, SkillViewSet, UserSkillViewSet
 
-__all__ = ["DeviceViewSet"]
+__all__ = ["DeviceSkillViewSet", "DeviceViewSet", "SkillViewSet", "UserSkillViewSet"]

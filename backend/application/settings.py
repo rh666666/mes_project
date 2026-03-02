@@ -156,6 +156,7 @@ SPECTACULAR_SETTINGS = {
     'COMPONENT_SPLIT_REQUEST': True,
     'ENUM_NAME_OVERRIDES': {
         'DeviceStatusEnum': 'mes.models.devices.Device.Status',
+        'SkillTypeEnum': 'mes.models.skills.Skill.Type',
     },
 }
 
