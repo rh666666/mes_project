@@ -129,7 +129,9 @@ export default {
         { value: DeviceStatus.IDLE, label: DeviceStatusLabel[DeviceStatus.IDLE] },
         { value: DeviceStatus.RUNNING, label: DeviceStatusLabel[DeviceStatus.RUNNING] },
         { value: DeviceStatus.ERROR, label: DeviceStatusLabel[DeviceStatus.ERROR] }
-      ]
+      ],
+      /** @type {boolean} 是否是首次加载 */
+      isFirstLoad: true
     }
   },
 
@@ -158,6 +160,13 @@ export default {
 
   onLoad() {
     this.loadDeviceList()
+  },
+
+  onShow() {
+    if (!this.isFirstLoad) {
+      this.loadDeviceList()
+    }
+    this.isFirstLoad = false
   },
 
   onUnload() {

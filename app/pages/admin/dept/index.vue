@@ -91,7 +91,9 @@ export default {
       /** @type {boolean} 是否还有更多数据 */
       hasMore: true,
       /** @type {number} 滚动位置 */
-      scrollTop: 0
+      scrollTop: 0,
+      /** @type {boolean} 是否是首次加载 */
+      isFirstLoad: true
     }
   },
 
@@ -109,6 +111,13 @@ export default {
 
   onLoad() {
     this.loadDeptList()
+  },
+
+  onShow() {
+    if (!this.isFirstLoad) {
+      this.loadDeptList()
+    }
+    this.isFirstLoad = false
   },
 
   onUnload() {

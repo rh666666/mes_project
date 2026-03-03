@@ -117,7 +117,9 @@ export default {
       typeOptions: [
         { value: SkillType.USER, label: SkillTypeLabel[SkillType.USER] },
         { value: SkillType.DEVICE, label: SkillTypeLabel[SkillType.DEVICE] }
-      ]
+      ],
+      /** @type {boolean} 是否是首次加载 */
+      isFirstLoad: true
     }
   },
 
@@ -146,6 +148,13 @@ export default {
 
   onLoad() {
     this.loadSkillList()
+  },
+
+  onShow() {
+    if (!this.isFirstLoad) {
+      this.loadSkillList()
+    }
+    this.isFirstLoad = false
   },
 
   onUnload() {
