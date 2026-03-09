@@ -25,11 +25,11 @@
         />
 
         <!-- 部门选择 -->
-        <wd-picker
-          v-model="form.dept"
-          label="部门"
-          placeholder="选择部门"
-          :columns="deptColumns"
+        <wd-cell
+          title="部门"
+          is-link
+          :value="selectedDeptName"
+          @click="onShowDeptSelector"
         />
       </wd-cell-group>
     </view>
@@ -40,12 +40,40 @@
         {{ isSaving ? '保存中...' : '保存' }}
       </wd-button>
     </view>
+
+    <!-- 部门选择弹窗 -->
+    <wd-popup v-model="showDeptSelector" position="bottom" :safe-area-inset-bottom="true">
+      <view class="popup-content">
+        <view class="popup-header">
+          <text class="popup-title">选择部门</text>
+          <wd-icon name="close" size="20" @click="showDeptSelector = false" />
+        </view>
+        <view class="popup-body">
+          <SearchableSelector
+            v-model="form.dept"
+            label=""
+            placeholder="搜索部门名称"
+            search-key="name"
+            :fetch-api="deptApi.getDeptList"
+            title-field="name"
+            subtitle-field="code"
+            @select="onDeptSelect"
+          />
+        </view>
+        <view class="popup-footer">
+          <wd-button type="primary" size="large" @click="showDeptSelector = false">
+            确认
+          </wd-button>
+        </view>
+      </view>
+    </wd-popup>
   </view>
 </template>
 
 <script>
 import authApi from '@/api/auth.js'
 import deptApi from '@/api/dept.js'
+import SearchableSelector from '@/components/ui/SearchableSelector/SearchableSelector.vue'
 
 /**
  * 用户编辑页面
@@ -54,6 +82,10 @@ import deptApi from '@/api/dept.js'
  */
 export default {
   name: 'UserEdit',
+
+  components: {
+    SearchableSelector
+  },
 
   data() {
     return {
@@ -70,10 +102,14 @@ export default {
         role: 'user',
         dept: null
       },
+      /** @type {string} 已选部门名称 */
+      selectedDeptLabel: '',
       /** @type {boolean} 是否正在保存 */
       isSaving: false,
-      /** @type {Array} 部门列表 */
-      deptList: []
+      /** @type {boolean} 是否显示部门选择弹窗 */
+      showDeptSelector: false,
+      /** @type {Object} deptApi 引用 */
+      deptApi: deptApi
     }
   },
 
@@ -90,15 +126,12 @@ export default {
     },
 
     /**
-     * 部门选项列表
-     * @returns {Array}
+     * 已选部门显示名称
+     * @returns {string}
      */
-    deptColumns() {
-      const columns = [{ value: '', label: '无部门' }]
-      this.deptList.forEach(dept => {
-        columns.push({ value: dept.id, label: dept.name })
-      })
-      return columns
+    selectedDeptName() {
+      if (!this.form.dept) return '无部门'
+      return this.selectedDeptLabel || '已选择'
     }
   },
 
@@ -117,7 +150,6 @@ export default {
       } else {
         this.loadUserFromList()
       }
-      this.loadDeptList()
     } else {
       uni.showToast({
         title: '用户ID不能为空',
@@ -134,7 +166,7 @@ export default {
      * 初始化用户数据
      * @param {Object} user - 用户数据
      */
-    initUserData(user) {
+    async initUserData(user) {
       this.userInfo = {
         username: user.username || '',
         name: user.name || '',
@@ -143,6 +175,29 @@ export default {
       this.form = {
         role: user.role || 'user',
         dept: user.dept || ''
+      }
+      // 根据API定义，UserListItem只有dept字段（部门ID），需要获取部门名称
+      if (user.dept) {
+        await this.loadDeptName(user.dept)
+      } else {
+        this.selectedDeptLabel = ''
+      }
+    },
+
+    /**
+     * 加载部门名称
+     * @async
+     * @param {number} deptId - 部门ID
+     */
+    async loadDeptName(deptId) {
+      try {
+        const res = await deptApi.getDeptDetail(deptId)
+        if (res.code === 2000 && res.data) {
+          this.selectedDeptLabel = res.data.name || ''
+        }
+      } catch (error) {
+        console.error('获取部门名称失败:', error)
+        this.selectedDeptLabel = ''
       }
     },
 
@@ -153,7 +208,7 @@ export default {
     async loadUserFromList() {
       uni.showLoading({ title: '加载中...' })
       try {
-        const res = await authApi.getUserList({ page: 1, limit: 1000 })
+        const res = await authApi.getUserList({ page: 1, limit: 100 })
         if (res.code === 2000) {
           const user = res.data.find(u => u.id === this.userId)
           if (user) {
@@ -182,17 +237,21 @@ export default {
     },
 
     /**
-     * 加载部门列表
-     * @async
+     * 显示部门选择弹窗
      */
-    async loadDeptList() {
-      try {
-        const res = await deptApi.getDeptList({ page: 1, limit: 100 })
-        if (res.code === 2000) {
-          this.deptList = res.data || []
-        }
-      } catch (error) {
-        console.error('获取部门列表失败:', error)
+    onShowDeptSelector() {
+      this.showDeptSelector = true
+    },
+
+    /**
+     * 部门选择回调
+     * @param {Object} dept - 选中的部门，为null表示取消选择
+     */
+    onDeptSelect(dept) {
+      if (dept) {
+        this.selectedDeptLabel = dept.name || ''
+      } else {
+        this.selectedDeptLabel = ''
       }
     },
 
@@ -263,6 +322,45 @@ export default {
   padding: 24rpx;
   background-color: $uni-bg-color-white;
   border-top: 1px solid $uni-border-color;
+
+  :deep(.wd-button) {
+    width: 100%;
+  }
+}
+
+.popup-content {
+  background-color: $uni-bg-color-white;
+  border-radius: 24rpx 24rpx 0 0;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 32rpx;
+  border-bottom: 1px solid $uni-border-color;
+  flex-shrink: 0;
+}
+
+.popup-title {
+  font-size: 32rpx;
+  font-weight: 500;
+  color: $uni-text-color;
+}
+
+.popup-body {
+  padding: 32rpx;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.popup-footer {
+  padding: 24rpx 32rpx calc(24rpx + env(safe-area-inset-bottom));
+  border-top: 1px solid $uni-border-color;
+  flex-shrink: 0;
 
   :deep(.wd-button) {
     width: 100%;

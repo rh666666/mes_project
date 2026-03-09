@@ -9,6 +9,22 @@
         @clear="onClearSearch"
       />
 
+      <!-- 功能入口列表 -->
+      <view class="function-section">
+        <wd-cell-group>
+          <wd-cell title="用户技能绑定" is-link @click="onUserSkillBind">
+            <template #icon>
+              <wd-icon name="user" size="20" custom-class="function-icon" />
+            </template>
+          </wd-cell>
+          <wd-cell title="设备技能绑定" is-link @click="onDeviceSkillBind">
+            <template #icon>
+              <wd-icon name="setting" size="20" custom-class="function-icon" />
+            </template>
+          </wd-cell>
+        </wd-cell-group>
+      </view>
+
       <!-- 类型筛选 -->
       <view class="type-filter">
         <wd-tabs v-model="selectedType">
@@ -300,6 +316,24 @@ export default {
     },
 
     /**
+     * 跳转到用户技能绑定页面
+     */
+    onUserSkillBind() {
+      uni.navigateTo({
+        url: '/pages/admin/skill/user-skill'
+      })
+    },
+
+    /**
+     * 跳转到设备技能绑定页面
+     */
+    onDeviceSkillBind() {
+      uni.navigateTo({
+        url: '/pages/admin/skill/device-skill'
+      })
+    },
+
+    /**
      * 滚动事件处理
      * @param {Object} e - 滚动事件对象
      */
@@ -325,6 +359,15 @@ export default {
   position: sticky;
   top: var(--window-top, 0);
   z-index: 100;
+}
+
+.function-section {
+  margin-top: 24rpx;
+}
+
+.function-icon {
+  color: $uni-color-primary;
+  margin-right: 16rpx;
 }
 
 .type-filter {
@@ -378,5 +421,4 @@ export default {
     border-radius: 50% !important;
   }
 }
-
 </style>

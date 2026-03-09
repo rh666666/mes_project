@@ -83,6 +83,18 @@
 			"style": {
 				"navigationBarTitleText": "编辑技能"
 			}
+		},
+		{
+			"path": "pages/admin/skill/user-skill",
+			"style": {
+				"navigationBarTitleText": "用户技能绑定"
+			}
+		},
+		{
+			"path": "pages/admin/skill/device-skill",
+			"style": {
+				"navigationBarTitleText": "设备技能绑定"
+			}
 		}
 	],
 	"globalStyle": {
