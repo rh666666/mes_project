@@ -27,9 +27,10 @@ device_skill_patterns = [
 ]
 
 urlpatterns = [
-    path("", include(router.urls)),
-    # 用户技能关联路由 /skills/users/
+    # 用户技能关联路由 /skills/users/ - 必须放在 router.urls 之前
     path("skills/users/", include(user_skill_patterns)),
-    # 设备技能关联路由 /skills/devices/
+    # 设备技能关联路由 /skills/devices/ - 必须放在 router.urls 之前
     path("skills/devices/", include(device_skill_patterns)),
+    # 路由器 URL - 放在最后，避免与上面的子路由冲突
+    path("", include(router.urls)),
 ]
