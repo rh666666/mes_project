@@ -4,6 +4,19 @@
 """
 
 from .device import DeviceViewSet
+from .material import MaterialViewSet, UnitViewSet
+from .process import ProcessRouteDetailViewSet, ProcessRouteViewSet, ProcessSkillRequiredViewSet, ProcessViewSet
 from .skill import DeviceSkillViewSet, SkillViewSet, UserSkillViewSet
 
-__all__ = ["DeviceSkillViewSet", "DeviceViewSet", "SkillViewSet", "UserSkillViewSet"]
+__all__ = [
+    "DeviceSkillViewSet",
+    "DeviceViewSet",
+    "MaterialViewSet",
+    "ProcessRouteDetailViewSet",
+    "ProcessRouteViewSet",
+    "ProcessSkillRequiredViewSet",
+    "ProcessViewSet",
+    "SkillViewSet",
+    "UnitViewSet",
+    "UserSkillViewSet",
+]
