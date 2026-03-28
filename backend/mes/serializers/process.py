@@ -96,6 +96,20 @@ class ProcessRouteDetailSerializer(serializers.ModelSerializer):
     process_route_version = serializers.CharField(source="process_route.version", read_only=True, help_text="工艺路线版本")
     process_name = serializers.CharField(source="process.name", read_only=True, help_text="工序名称")
     process_code = serializers.CharField(source="process.code", read_only=True, help_text="工序编码")
+    bom_code = serializers.SerializerMethodField(help_text="物料清单编码")
+    bom_version = serializers.SerializerMethodField(help_text="物料清单版本")
+
+    def get_bom_code(self, obj):
+        """获取物料清单编码"""
+        if obj.process_bom and obj.process_bom.material:
+            return obj.process_bom.material.code
+        return None
+
+    def get_bom_version(self, obj):
+        """获取物料清单版本"""
+        if obj.process_bom:
+            return obj.process_bom.version
+        return None
 
     class Meta:
         model = ProcessRouteDetail
@@ -108,6 +122,9 @@ class ProcessRouteDetailSerializer(serializers.ModelSerializer):
             "process_code",
             "process_name",
             "sequence",
+            "process_bom",
+            "bom_code",
+            "bom_version",
             "create_datetime",
         ]
         read_only_fields = ["id"]
@@ -235,3 +252,4 @@ class ProcessRouteDetailCreateRequestSerializer(serializers.Serializer):
     process_route = serializers.IntegerField(required=True, help_text="工艺路线ID")
     process = serializers.IntegerField(required=True, help_text="工序ID")
     sequence = serializers.IntegerField(required=True, min_value=1, help_text="工序顺序")
+    bom = serializers.IntegerField(required=False, help_text="物料清单ID")

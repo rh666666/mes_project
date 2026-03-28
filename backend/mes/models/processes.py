@@ -1,8 +1,10 @@
 from django.db import models
 
-from mes.models.materials import Material
-from mes.models.skills import Skill
 from system.models import CoreModel
+
+from .bom import BillOfMaterial
+from .materials import Material
+from .skills import Skill
 
 
 class Process(CoreModel):
@@ -38,6 +40,7 @@ class ProcessRoute(CoreModel):
 
     material = models.ForeignKey(Material, on_delete=models.CASCADE, related_name="process_routes", verbose_name="物料")
     version = models.CharField(max_length=50, verbose_name="版本")
+    is_active = models.BooleanField(verbose_name="是否生效", default=True)
 
     def __str__(self):
         return f"{self.material.code} - {self.version}"
@@ -54,6 +57,7 @@ class ProcessRouteDetail(CoreModel):
     process_route = models.ForeignKey(ProcessRoute, on_delete=models.CASCADE, related_name="details", verbose_name="工艺路线")
     process = models.ForeignKey(Process, on_delete=models.CASCADE, related_name="routes", verbose_name="工序")
     sequence = models.PositiveIntegerField(verbose_name="工序顺序")
+    process_bom = models.ForeignKey(BillOfMaterial, on_delete=models.SET_NULL, null=True, related_name="routes", verbose_name="工序物料清单")
 
     def __str__(self):
         return f"{self.process_route.code} - {self.process.code}"

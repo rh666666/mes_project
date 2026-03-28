@@ -15,6 +15,7 @@ from rest_framework.permissions import BasePermission
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from mes.models.bom import BillOfMaterial
 from mes.models.processes import Process, ProcessRoute, ProcessRouteDetail, ProcessSkillRequired
 from mes.serializers.process import (
     ProcessCreateRequestSerializer,
@@ -688,7 +689,7 @@ class ProcessRouteDetailViewSet(viewsets.ViewSet):
         """创建工艺路线详情关联
 
         Args:
-            request: 包含 process_route、process、sequence 的创建请求
+            request: 包含 process_route、process、sequence、bom 的创建请求
 
         Returns:
             Response: 创建的工艺路线详情关联信息
@@ -700,17 +701,30 @@ class ProcessRouteDetailViewSet(viewsets.ViewSet):
         process_route_id = serializer.validated_data["process_route"]
         process_id = serializer.validated_data["process"]
         sequence = serializer.validated_data["sequence"]
+        bom_id = serializer.validated_data.get("bom")
 
         if ProcessRouteDetail.objects.filter(
             process_route_id=process_route_id, process_id=process_id
         ).exists():
             return ErrorResponse(msg="该工艺路线已包含此工序", status=status.HTTP_400_BAD_REQUEST)
 
+        if bom_id:
+            try:
+                BillOfMaterial.objects.get(id=bom_id)
+            except BillOfMaterial.DoesNotExist:
+                return ErrorResponse(msg="物料清单不存在", status=status.HTTP_400_BAD_REQUEST)
+
         try:
             route_detail = ProcessRouteDetail.objects.create(
-                process_route_id=process_route_id, process_id=process_id, sequence=sequence
+                process_route_id=process_route_id,
+                process_id=process_id,
+                sequence=sequence,
+                bom_id=bom_id
             )
-            logger.info("工艺路线详情关联已创建: 工艺路线ID=%s, 工序ID=%s, 顺序=%s", process_route_id, process_id, sequence)
+            logger.info(
+                "工艺路线详情关联已创建: 工艺路线ID=%s, 工序ID=%s, 顺序=%s, 物料清单ID=%s",
+                process_route_id, process_id, sequence, bom_id
+            )
         except Exception as e:
             logger.error("创建工艺路线详情关联失败: %s", str(e))
             return ErrorResponse(msg=str(e), status=status.HTTP_400_BAD_REQUEST)

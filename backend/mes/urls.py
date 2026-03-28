@@ -4,13 +4,19 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from .views import (
+    BillOfMaterialViewSet,
+    BOMDetailViewSet,
     DeviceSkillViewSet,
     DeviceViewSet,
+    DispatchOrderViewSet,
     MaterialViewSet,
     ProcessRouteDetailViewSet,
     ProcessRouteViewSet,
     ProcessSkillRequiredViewSet,
     ProcessViewSet,
+    ProductionOrderViewSet,
+    ProductionReportViewSet,
+    QualityCheckOrderViewSet,
     SkillViewSet,
     UnitViewSet,
     UserSkillViewSet,
@@ -32,6 +38,16 @@ router.register(r"skills", SkillViewSet, basename="skills")
 router.register(r"processes", ProcessViewSet, basename="processes")
 # ProcessRouteViewSet - 工艺路线相关 (增删改查)
 router.register(r"process-routes", ProcessRouteViewSet, basename="process-routes")
+# BillOfMaterialViewSet - 物料清单相关 (增删改查、树形结构)
+router.register(r"boms", BillOfMaterialViewSet, basename="boms")
+# ProductionOrderViewSet - 生产任务单相关 (增删改查、下发、取消)
+router.register(r"production-orders", ProductionOrderViewSet, basename="production-orders")
+# DispatchOrderViewSet - 工序派工单相关 (查询、派工、抢单、报工等)
+router.register(r"dispatch-orders", DispatchOrderViewSet, basename="dispatch-orders")
+# ProductionReportViewSet - 生产报工相关 (查询)
+router.register(r"production-reports", ProductionReportViewSet, basename="production-reports")
+# QualityCheckOrderViewSet - 质检任务单相关 (查询、提交结果)
+router.register(r"quality-check-orders", QualityCheckOrderViewSet, basename="quality-check-orders")
 
 # 用户技能关联子路由
 user_skill_patterns = [
@@ -57,6 +73,12 @@ process_route_detail_patterns = [
     path("<int:pk>/", ProcessRouteDetailViewSet.as_view({"delete": "destroy"}), name="process-route-details-detail"),
 ]
 
+# BOM详情关联子路由
+bom_detail_patterns = [
+    path("", BOMDetailViewSet.as_view({"get": "list", "post": "create"}), name="bom-details-list"),
+    path("<int:pk>/", BOMDetailViewSet.as_view({"delete": "destroy"}), name="bom-details-detail"),
+]
+
 urlpatterns = [
     # 用户技能关联路由 /skills/users/ - 必须放在 router.urls 之前
     path("skills/users/", include(user_skill_patterns)),
@@ -66,6 +88,8 @@ urlpatterns = [
     path("processes/skills/", include(process_skill_patterns)),
     # 工艺路线详情关联路由 /process-routes/details/ - 必须放在 router.urls 之前
     path("process-routes/details/", include(process_route_detail_patterns)),
+    # BOM详情关联路由 /boms/details/ - 必须放在 router.urls 之前
+    path("boms/details/", include(bom_detail_patterns)),
     # 路由器 URL - 放在最后，避免与上面的子路由冲突
     path("", include(router.urls)),
 ]
