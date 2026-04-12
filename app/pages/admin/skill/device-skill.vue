@@ -37,20 +37,26 @@
       @scroll="onScroll"
     >
       <wd-cell-group>
-        <wd-cell
+        <wd-swipe-action
           v-for="(item, index) in deviceSkillList"
           :key="item.id"
-          :title="item.device_name"
-          :label="`${item.skill_code} - ${item.skill_name}`"
-          clickable
-          @click="onItemClick(item)"
+          v-model="swipeState[item.id]"
+          @click="onSwipeClick($event, item)"
         >
-          <template #value>
-            <wd-tag type="danger" size="small" @click.stop="onDelete(item)">
-              删除
-            </wd-tag>
+          <wd-cell
+            :title="item.device_name"
+            :label="`${item.skill_code} - ${item.skill_name}`"
+            clickable
+            @click="onItemClick(item)"
+            @longpress="onLongPress(item)"
+          />
+          <template #right>
+            <view class="swipe-action-delete" @click="onDelete(item)">
+              <wd-icon name="delete" size="20" color="#fff" />
+              <text class="delete-text">删除</text>
+            </view>
           </template>
-        </wd-cell>
+        </wd-swipe-action>
       </wd-cell-group>
 
       <wd-loadmore :state="loadMoreState" />
@@ -168,7 +174,9 @@ export default {
         skill: ''
       },
       /** @type {Object} deviceApi 引用 */
-      deviceApi: deviceApi
+      deviceApi: deviceApi,
+      /** @type {Object} 滑动操作状态 */
+      swipeState: {}
     }
   },
 
@@ -502,6 +510,36 @@ export default {
     },
 
     /**
+     * 长按列表项，显示删除确认
+     * @param {Object} item - 绑定记录
+     */
+    onLongPress(item) {
+      uni.showModal({
+        title: '确认删除',
+        content: `确定要删除设备 "${item.device_name}" 的技能 "${item.skill_name}" 绑定吗？`,
+        confirmText: '删除',
+        confirmColor: '#ee0a24',
+        success: (res) => {
+          if (res.confirm) {
+            this.onConfirmDelete(item.id)
+          }
+        }
+      })
+    },
+
+    /**
+     * 滑动操作点击
+     * @param {Object} event - 点击事件
+     * @param {Object} item - 绑定记录
+     */
+    onSwipeClick(event, item) {
+      // 点击滑动区域外部时关闭滑动
+      if (event.value === 'inside') {
+        this.swipeState[item.id] = 'close'
+      }
+    },
+
+    /**
      * 滚动事件处理
      * @param {Object} e - 滚动事件对象
      */
@@ -618,5 +656,21 @@ export default {
   :deep(.wd-button) {
     width: 100%;
   }
+}
+
+.swipe-action-delete {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 120rpx;
+  height: 100%;
+  background-color: #ee0a24;
+  color: #fff;
+}
+
+.delete-text {
+  font-size: 24rpx;
+  margin-top: 8rpx;
 }
 </style>
