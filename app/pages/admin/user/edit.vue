@@ -28,6 +28,8 @@
         <wd-cell
           title="部门"
           is-link
+          value-align="left"
+          title-width="33%"
           :value="selectedDeptName"
           @click="onShowDeptSelector"
         />

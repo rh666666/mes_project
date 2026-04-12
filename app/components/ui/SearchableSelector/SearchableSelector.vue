@@ -23,6 +23,7 @@
           :title="getTitle(item)"
           :label="getSubtitle(item)"
           clickable
+          value-align="left"
           :custom-class="isSelected(item) ? 'selected-cell' : ''"
           @click="onSelect(item)"
         >

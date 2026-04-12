@@ -24,6 +24,8 @@
         <wd-cell
           title="父级部门"
           is-link
+          value-align="left"
+          title-width="33%"
           :value="selectedParentName"
           @click="onShowParentSelector"
         />
