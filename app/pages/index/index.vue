@@ -53,7 +53,8 @@ export default {
         { text: '用户管理', key: 'userManagement' },
         { text: '部门管理', key: 'deptManagement' },
         { text: '设备管理', key: 'deviceManagement' },
-        { text: '技能管理', key: 'skillManagement' }
+        { text: '技能管理', key: 'skillManagement' },
+        { text: '单位管理', key: 'unitManagement' }
       ]
     }
   },
@@ -84,6 +85,8 @@ export default {
         this.onDeviceManagement()
       } else if (item.key === 'skillManagement') {
         this.onSkillManagement()
+      } else if (item.key === 'unitManagement') {
+        this.onUnitManagement()
       }
     },
 
@@ -120,6 +123,15 @@ export default {
     onSkillManagement() {
       uni.navigateTo({
         url: '/pages/admin/skill/index'
+      })
+    },
+
+    /**
+     * 跳转到单位管理页面
+     */
+    onUnitManagement() {
+      uni.navigateTo({
+        url: '/pages/admin/unit/index'
       })
     }
   }

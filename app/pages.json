@@ -95,6 +95,18 @@
 			"style": {
 				"navigationBarTitleText": "设备技能绑定"
 			}
+		},
+		{
+			"path": "pages/admin/unit/index",
+			"style": {
+				"navigationBarTitleText": "单位管理"
+			}
+		},
+		{
+			"path": "pages/admin/unit/edit",
+			"style": {
+				"navigationBarTitleText": "编辑单位"
+			}
 		}
 	],
 	"globalStyle": {
