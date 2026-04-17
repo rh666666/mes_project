@@ -16,7 +16,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from mes.models.bom import BillOfMaterial
-from mes.models.processes import Process, ProcessRoute, ProcessRouteDetail, ProcessSkillRequired
+from mes.models.processes import Process, ProcessRoute, ProcessRouteEdge, ProcessRouteNode, ProcessSkillRequired
 from mes.serializers.process import (
     ProcessCreateRequestSerializer,
     ProcessDetailResponseSerializer,
@@ -25,9 +25,14 @@ from mes.serializers.process import (
     ProcessRouteCreateRequestSerializer,
     ProcessRouteDetailCreateRequestSerializer,
     ProcessRouteDetailListRequestSerializer,
-    ProcessRouteDetailListResponseSerializer,
     ProcessRouteDetailResponseSerializer,
     ProcessRouteDetailSerializer,
+    ProcessRouteEdgeSerializer,
+    ProcessRouteGraphEdgeSaveSerializer,
+    ProcessRouteGraphNodeSaveSerializer,
+    ProcessRouteGraphQueryRequestSerializer,
+    ProcessRouteGraphResponseSerializer,
+    ProcessRouteGraphSaveResponseSerializer,
     ProcessRouteListRequestSerializer,
     ProcessRouteListResponseSerializer,
     ProcessRouteSerializer,
@@ -618,150 +623,163 @@ class ProcessRouteViewSet(viewsets.ViewSet):
 
 
 class ProcessRouteDetailViewSet(viewsets.ViewSet):
-    """工艺路线详情视图集
-
-    处理工艺路线详情关联的增删查操作，仅管理员可操作。
-    """
+    """工艺路线图视图集（兼容旧 details 路径）"""
 
     permission_classes = [IsAdmin]
 
     @extend_schema(
-        summary="获取工艺路线详情列表",
-        description="获取工艺路线详情关联列表，支持分页和按工艺路线、工序过滤",
-        parameters=[ProcessRouteDetailListRequestSerializer],
+        summary="获取工艺路线图",
+        description="返回指定工艺路线的 nodes 与 edges",
+        parameters=[ProcessRouteGraphQueryRequestSerializer],
         responses={
-            200: OpenApiResponse(response=ProcessRouteDetailListResponseSerializer, description="获取成功"),
+            200: OpenApiResponse(response=ProcessRouteGraphResponseSerializer, description="获取成功"),
             400: OpenApiResponse(response=ErrorResponseSerializer, description="参数错误"),
             403: OpenApiResponse(response=ErrorResponseSerializer, description="无权限"),
+            404: OpenApiResponse(response=ErrorResponseSerializer, description="工艺路线不存在"),
         },
         tags=["工艺路线详情"],
     )
     def list(self, request: Request) -> Response:
-        """获取工艺路线详情列表
-
-        Args:
-            request: 包含 page、limit 和可选 process_route、process 过滤条件的请求
-
-        Returns:
-            Response: 分页工艺路线详情列表
-        """
         serializer = ProcessRouteDetailListRequestSerializer(data=request.query_params)
         if not serializer.is_valid():
             return ErrorResponse(msg=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        page = serializer.validated_data.get("page", 1)
-        limit = serializer.validated_data.get("limit", 10)
-        process_route_filter = serializer.validated_data.get("process_route")
-        process_filter = serializer.validated_data.get("process")
+        process_route_id = serializer.validated_data.get("process_route")
+        if not process_route_id:
+            return ErrorResponse(msg="process_route 参数不能为空", status=status.HTTP_400_BAD_REQUEST)
 
-        queryset = ProcessRouteDetail.objects.all().order_by("process_route", "sequence")
+        try:
+            process_route = ProcessRoute.objects.get(id=process_route_id)
+        except ProcessRoute.DoesNotExist:
+            return ErrorResponse(msg="工艺路线不存在", status=status.HTTP_404_NOT_FOUND)
 
-        if process_route_filter:
-            queryset = queryset.filter(process_route_id=process_route_filter)
-        if process_filter:
-            queryset = queryset.filter(process_id=process_filter)
-
-        total = queryset.count()
-        start = (page - 1) * limit
-        end = start + limit
-        route_details = queryset[start:end]
-
+        nodes = ProcessRouteNode.objects.filter(process_route=process_route).select_related("process", "process_bom")
+        edges = ProcessRouteEdge.objects.filter(process_route=process_route).select_related("from_node", "to_node")
         return SuccessResponse(
-            data=ProcessRouteDetailSerializer(route_details, many=True).data,
-            page=page,
-            limit=limit,
-            total=total,
+            data={
+                "process_route": process_route_id,
+                "nodes": ProcessRouteDetailSerializer(nodes, many=True).data,
+                "edges": ProcessRouteEdgeSerializer(edges, many=True).data,
+            }
         )
 
     @extend_schema(
-        summary="创建工艺路线详情关联",
-        description="为工艺路线添加工序",
+        summary="保存工艺路线图",
+        description="整图覆盖保存 nodes 与 edges",
         request=ProcessRouteDetailCreateRequestSerializer,
         responses={
-            200: OpenApiResponse(response=DetailResponseSerializer, description="创建成功"),
-            400: OpenApiResponse(response=ErrorResponseSerializer, description="参数错误或关联已存在"),
+            200: OpenApiResponse(response=ProcessRouteGraphSaveResponseSerializer, description="保存成功"),
+            400: OpenApiResponse(response=ErrorResponseSerializer, description="参数错误"),
             403: OpenApiResponse(response=ErrorResponseSerializer, description="无权限"),
         },
         tags=["工艺路线详情"],
     )
     @transaction.atomic
     def create(self, request: Request) -> Response:
-        """创建工艺路线详情关联
-
-        Args:
-            request: 包含 process_route、process、sequence、bom 的创建请求
-
-        Returns:
-            Response: 创建的工艺路线详情关联信息
-        """
         serializer = ProcessRouteDetailCreateRequestSerializer(data=request.data)
         if not serializer.is_valid():
             return ErrorResponse(msg=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         process_route_id = serializer.validated_data["process_route"]
-        process_id = serializer.validated_data["process"]
-        sequence = serializer.validated_data["sequence"]
-        bom_id = serializer.validated_data.get("bom")
-
-        if ProcessRouteDetail.objects.filter(
-            process_route_id=process_route_id, process_id=process_id
-        ).exists():
-            return ErrorResponse(msg="该工艺路线已包含此工序", status=status.HTTP_400_BAD_REQUEST)
-
-        if bom_id:
-            try:
-                BillOfMaterial.objects.get(id=bom_id)
-            except BillOfMaterial.DoesNotExist:
-                return ErrorResponse(msg="物料清单不存在", status=status.HTTP_400_BAD_REQUEST)
+        nodes_payload = serializer.validated_data.get("nodes", [])
+        edges_payload = serializer.validated_data.get("edges", [])
 
         try:
-            route_detail = ProcessRouteDetail.objects.create(
-                process_route_id=process_route_id,
-                process_id=process_id,
-                sequence=sequence,
-                bom_id=bom_id
-            )
-            logger.info(
-                "工艺路线详情关联已创建: 工艺路线ID=%s, 工序ID=%s, 顺序=%s, 物料清单ID=%s",
-                process_route_id, process_id, sequence, bom_id
-            )
+            process_route = ProcessRoute.objects.get(id=process_route_id)
+        except ProcessRoute.DoesNotExist:
+            return ErrorResponse(msg="工艺路线不存在", status=status.HTTP_400_BAD_REQUEST)
+
+        validated_nodes = []
+        for node_data in nodes_payload:
+            node_serializer = ProcessRouteGraphNodeSaveSerializer(data=node_data)
+            if not node_serializer.is_valid():
+                return ErrorResponse(msg=node_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            validated_nodes.append(node_serializer.validated_data)
+
+        validated_edges = []
+        for edge_data in edges_payload:
+            edge_serializer = ProcessRouteGraphEdgeSaveSerializer(data=edge_data)
+            if not edge_serializer.is_valid():
+                return ErrorResponse(msg=edge_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            validated_edges.append(edge_serializer.validated_data)
+
+        node_key_set = {node["node_key"] for node in validated_nodes}
+        if len(node_key_set) != len(validated_nodes):
+            return ErrorResponse(msg="节点 node_key 不能重复", status=status.HTTP_400_BAD_REQUEST)
+
+        for edge in validated_edges:
+            if edge["from_node_key"] == edge["to_node_key"]:
+                return ErrorResponse(msg="不允许自环边", status=status.HTTP_400_BAD_REQUEST)
+            if edge["from_node_key"] not in node_key_set or edge["to_node_key"] not in node_key_set:
+                return ErrorResponse(msg="边引用了不存在的节点", status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            ProcessRouteNode.objects.filter(process_route=process_route).delete()
+            ProcessRouteEdge.objects.filter(process_route=process_route).delete()
+
+            node_key_to_obj = {}
+            for node in validated_nodes:
+                bom_id = node.get("process_bom")
+                if bom_id:
+                    try:
+                        BillOfMaterial.objects.get(id=bom_id)
+                    except BillOfMaterial.DoesNotExist:
+                        return ErrorResponse(msg="物料清单不存在", status=status.HTTP_400_BAD_REQUEST)
+
+                node_obj = ProcessRouteNode.objects.create(
+                    process_route=process_route,
+                    process_id=node["process"],
+                    process_bom_id=bom_id,
+                    node_key=node["node_key"],
+                )
+                node_key_to_obj[node["node_key"]] = node_obj
+
+            for edge in validated_edges:
+                from_node = node_key_to_obj[edge["from_node_key"]]
+                to_node = node_key_to_obj[edge["to_node_key"]]
+                ProcessRouteEdge.objects.create(
+                    process_route=process_route,
+                    from_node=from_node,
+                    to_node=to_node,
+                    priority=edge.get("priority", 1),
+                )
+
+            logger.info("工艺路线图已保存: 工艺路线ID=%s, 节点数=%s, 边数=%s", process_route_id, len(validated_nodes), len(validated_edges))
         except Exception as e:
-            logger.error("创建工艺路线详情关联失败: %s", str(e))
+            logger.error("保存工艺路线图失败: %s", str(e))
             return ErrorResponse(msg=str(e), status=status.HTTP_400_BAD_REQUEST)
 
-        return DetailResponse(data=ProcessRouteDetailSerializer(route_detail).data)
+        return DetailResponse(
+            data={
+                "process_route": process_route_id,
+                "nodes": ProcessRouteDetailSerializer(node_key_to_obj.values(), many=True).data,
+                "edges": ProcessRouteEdgeSerializer(
+                    ProcessRouteEdge.objects.filter(process_route=process_route), many=True
+                ).data,
+            }
+        )
 
     @extend_schema(
-        summary="删除工艺路线详情关联",
-        description="删除指定的工艺路线详情关联",
+        summary="删除工艺路线图节点（兼容）",
         responses={
             200: OpenApiResponse(response=DetailResponseSerializer, description="删除成功"),
             403: OpenApiResponse(response=ErrorResponseSerializer, description="无权限"),
-            404: OpenApiResponse(response=ErrorResponseSerializer, description="关联不存在"),
+            404: OpenApiResponse(response=ErrorResponseSerializer, description="工艺路线节点不存在"),
         },
         tags=["工艺路线详情"],
     )
     @transaction.atomic
     def destroy(self, request: Request, pk: int) -> Response:
-        """删除工艺路线详情关联
-
-        Args:
-            request: 请求对象
-            pk: 工艺路线详情关联ID
-
-        Returns:
-            Response: 删除结果
-        """
         try:
-            route_detail = ProcessRouteDetail.objects.get(id=pk)
-        except ProcessRouteDetail.DoesNotExist:
-            return ErrorResponse(msg="工艺路线详情关联不存在", status=status.HTTP_404_NOT_FOUND)
+            route_node = ProcessRouteNode.objects.get(id=pk)
+        except ProcessRouteNode.DoesNotExist:
+            return ErrorResponse(msg="工艺路线节点不存在", status=status.HTTP_404_NOT_FOUND)
 
         try:
-            route_detail.delete()
-            logger.info("工艺路线详情关联已删除: ID=%s", pk)
+            route_node.delete()
+            logger.info("工艺路线节点已删除: ID=%s", pk)
         except Exception as e:
-            logger.error("删除工艺路线详情关联 %s 失败: %s", pk, str(e))
+            logger.error("删除工艺路线节点 %s 失败: %s", pk, str(e))
             return ErrorResponse(msg=str(e), status=status.HTTP_400_BAD_REQUEST)
 
         return DetailResponse(data=None, msg="删除成功")

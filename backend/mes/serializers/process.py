@@ -7,7 +7,7 @@
 from drf_spectacular.utils import extend_schema_serializer
 from rest_framework import serializers
 
-from mes.models.processes import Process, ProcessRoute, ProcessRouteDetail, ProcessSkillRequired
+from mes.models.processes import Process, ProcessRoute, ProcessRouteEdge, ProcessRouteNode, ProcessSkillRequired
 from utils import DetailResponseSerializer, SuccessResponseSerializer
 
 # ==================== 业务序列化器 ====================
@@ -87,17 +87,16 @@ class ProcessRouteSerializer(serializers.ModelSerializer):
 
 
 class ProcessRouteDetailSerializer(serializers.ModelSerializer):
-    """工艺路线详情序列化器
-
-    用于序列化工艺路线详情关联数据。
-    """
+    """工艺路线节点序列化器（兼容旧名称）"""
 
     material_name = serializers.CharField(source="process_route.material.name", read_only=True, help_text="物料名称")
     process_route_version = serializers.CharField(source="process_route.version", read_only=True, help_text="工艺路线版本")
     process_name = serializers.CharField(source="process.name", read_only=True, help_text="工序名称")
     process_code = serializers.CharField(source="process.code", read_only=True, help_text="工序编码")
+    process_bom = serializers.IntegerField(source="process_bom_id", read_only=True, help_text="工序物料清单ID")
     bom_code = serializers.SerializerMethodField(help_text="物料清单编码")
     bom_version = serializers.SerializerMethodField(help_text="物料清单版本")
+    node_key = serializers.CharField(read_only=True, help_text="节点唯一键")
 
     def get_bom_code(self, obj):
         """获取物料清单编码"""
@@ -112,7 +111,7 @@ class ProcessRouteDetailSerializer(serializers.ModelSerializer):
         return None
 
     class Meta:
-        model = ProcessRouteDetail
+        model = ProcessRouteNode
         fields = [
             "id",
             "process_route",
@@ -121,8 +120,8 @@ class ProcessRouteDetailSerializer(serializers.ModelSerializer):
             "process",
             "process_code",
             "process_name",
-            "sequence",
             "process_bom",
+            "node_key",
             "bom_code",
             "bom_version",
             "create_datetime",
@@ -239,6 +238,12 @@ class ProcessRouteDetailListRequestSerializer(serializers.Serializer):
     process = serializers.IntegerField(required=False, help_text="工序ID过滤")
 
 
+class ProcessRouteGraphQueryRequestSerializer(serializers.Serializer):
+    """工艺路线图查询请求序列化器"""
+
+    process_route = serializers.IntegerField(required=True, help_text="工艺路线ID")
+
+
 @extend_schema_serializer(many=False)
 class ProcessRouteDetailListResponseSerializer(SuccessResponseSerializer):
     """工艺路线详情列表响应序列化器"""
@@ -247,9 +252,66 @@ class ProcessRouteDetailListResponseSerializer(SuccessResponseSerializer):
 
 
 class ProcessRouteDetailCreateRequestSerializer(serializers.Serializer):
-    """工艺路线详情创建请求序列化器"""
+    """工艺路线图保存请求序列化器（兼容旧名称）"""
 
     process_route = serializers.IntegerField(required=True, help_text="工艺路线ID")
+    nodes = serializers.ListSerializer(child=serializers.DictField(), required=True, help_text="节点列表")
+    edges = serializers.ListSerializer(child=serializers.DictField(), required=True, help_text="边列表")
+
+
+class ProcessRouteGraphNodeSaveSerializer(serializers.Serializer):
+    """工艺路线图节点保存序列化器"""
+
+    node_key = serializers.CharField(required=True, max_length=64, help_text="前端节点唯一键")
     process = serializers.IntegerField(required=True, help_text="工序ID")
-    sequence = serializers.IntegerField(required=True, min_value=1, help_text="工序顺序")
-    bom = serializers.IntegerField(required=False, help_text="物料清单ID")
+    process_bom = serializers.IntegerField(required=False, allow_null=True, help_text="工序物料清单ID")
+
+
+class ProcessRouteGraphEdgeSaveSerializer(serializers.Serializer):
+    """工艺路线图边保存序列化器"""
+
+    from_node_key = serializers.CharField(required=True, max_length=64, help_text="起始节点键")
+    to_node_key = serializers.CharField(required=True, max_length=64, help_text="目标节点键")
+    priority = serializers.IntegerField(required=False, min_value=1, default=1, help_text="分支优先级")
+
+
+class ProcessRouteEdgeSerializer(serializers.ModelSerializer):
+    """工艺路线边序列化器"""
+
+    from_node_key = serializers.CharField(source="from_node.node_key", read_only=True, help_text="起始节点键")
+    to_node_key = serializers.CharField(source="to_node.node_key", read_only=True, help_text="目标节点键")
+
+    class Meta:
+        model = ProcessRouteEdge
+        fields = [
+            "id",
+            "process_route",
+            "from_node",
+            "to_node",
+            "from_node_key",
+            "to_node_key",
+            "priority",
+            "create_datetime",
+        ]
+        read_only_fields = ["id"]
+
+
+class ProcessRouteGraphDataSerializer(serializers.Serializer):
+    """工艺路线图数据序列化器"""
+
+    process_route = serializers.IntegerField(help_text="工艺路线ID")
+    nodes = ProcessRouteDetailSerializer(many=True, help_text="节点列表")
+    edges = ProcessRouteEdgeSerializer(many=True, help_text="边列表")
+
+
+@extend_schema_serializer(many=False)
+class ProcessRouteGraphResponseSerializer(SuccessResponseSerializer):
+    """工艺路线图查询响应序列化器"""
+
+    data = ProcessRouteGraphDataSerializer(help_text="工艺路线图数据")
+
+
+class ProcessRouteGraphSaveResponseSerializer(DetailResponseSerializer):
+    """工艺路线图保存响应序列化器"""
+
+    data = ProcessRouteGraphDataSerializer(help_text="保存后的工艺路线图数据")

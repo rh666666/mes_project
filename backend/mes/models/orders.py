@@ -53,13 +53,13 @@ class ProductionOrder(CoreModel):
         Returns:
             dict: {material_id: {material: Material, quantity: int}}
         """
-        # 获取工艺路线的第一道工序的物料清单
-        first_process = self.process_route.details.order_by('sequence').first()
-        if not first_process or not first_process.process_bom:
+        ordered_nodes = self.process_route.get_topological_nodes()
+        first_node = ordered_nodes[0][0] if ordered_nodes else None
+        if not first_node or not first_node.process_bom:
             return {}
         
         requirements = {}
-        for detail in first_process.process_bom.bom_details.all():
+        for detail in first_node.process_bom.bom_details.all():
             material = detail.material
             # quantity 表示生产1个产品需要多少个该原料
             required_qty = self.quantity * detail.quantity
@@ -75,28 +75,24 @@ class ProductionOrder(CoreModel):
         Returns:
             list: 创建的工序派工单列表
         """
-        from .processes import ProcessRouteDetail
-
         with transaction.atomic():
             # 更新状态为已下发
             self.status = self.Status.PUBLISHED
             self.save()
             
-            # 获取工艺路线的所有工序
-            route_details = ProcessRouteDetail.objects.filter(
-                process_route=self.process_route
-            ).order_by('sequence')
+            # 获取工艺路线按拓扑排序后的所有工序节点
+            route_nodes = self.process_route.get_topological_nodes()
             
             created_orders = []
             
-            for i, detail in enumerate(route_details):
+            for i, (route_node, level) in enumerate(route_nodes):
                 # 第一道工序派工单状态设为可派发，其他设为等待前置工序
                 status = DispatchOrder.Status.PENDING if i == 0 else DispatchOrder.Status.WAITING_PREVIOUS
                 
                 order = DispatchOrder.objects.create(
                     production_order=self,
-                    process=detail.process,
-                    sequence=detail.sequence,
+                    process=route_node.process,
+                    sequence=level,
                     quantity=self.quantity,
                     status=status
                 )
