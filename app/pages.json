@@ -107,6 +107,54 @@
 			"style": {
 				"navigationBarTitleText": "编辑单位"
 			}
+		},
+		{
+			"path": "pages/admin/material/index",
+			"style": {
+				"navigationBarTitleText": "物料管理"
+			}
+		},
+		{
+			"path": "pages/admin/material/edit",
+			"style": {
+				"navigationBarTitleText": "编辑物料"
+			}
+		},
+		{
+			"path": "pages/admin/process/index",
+			"style": {
+				"navigationBarTitleText": "工序管理"
+			}
+		},
+		{
+			"path": "pages/admin/process/edit",
+			"style": {
+				"navigationBarTitleText": "编辑工序"
+			}
+		},
+		{
+			"path": "pages/admin/process/process-skill",
+			"style": {
+				"navigationBarTitleText": "工序技能绑定"
+			}
+		},
+		{
+			"path": "pages/admin/process-route/index",
+			"style": {
+				"navigationBarTitleText": "工艺路线管理"
+			}
+		},
+		{
+			"path": "pages/admin/process-route/edit",
+			"style": {
+				"navigationBarTitleText": "编辑工艺路线"
+			}
+		},
+		{
+			"path": "pages/admin/process-route/route-editor",
+			"style": {
+				"navigationBarTitleText": "工艺路线节点图"
+			}
 		}
 	],
 	"globalStyle": {
@@ -120,9 +168,9 @@
 		"list": [
 			{
 				"pagePath": "pages/index/index",
-				"text": "首页",
-				"iconPath": "static/icons/home_24dp_000000_FILL0_wght400_GRAD0_opsz24.png",
-				"selectedIconPath": "static/icons/home_24dp_000000_FILL1_wght400_GRAD0_opsz24.png"
+				"text": "管理",
+				"iconPath": "static/icons/factory_24dp_000000_FILL0_wght400_GRAD0_opsz24.png",
+				"selectedIconPath": "static/icons/factory_24dp_000000_FILL1_wght400_GRAD0_opsz24.png"
 			},
 			{
 				"pagePath": "pages/profile/index",

@@ -3,18 +3,29 @@
     <view class="content">
       <!-- 管理员快捷入口 -->
       <view v-if="isAdmin" class="admin-section">
-        <view class="section-header">
-          <text class="section-title">管理员功能</text>
+        <view
+          v-for="(group, groupIndex) in adminMenuGroups"
+          :key="group.key"
+          class="menu-group"
+        >
+          <view class="section-header">
+            <text class="section-title module-title">{{ group.title }}</text>
+          </view>
+          <wd-cell-group border>
+            <wd-cell
+              v-for="(item, itemIndex) in group.items"
+              :key="item.key"
+              :title="item.text"
+              :border="itemIndex !== group.items.length - 1"
+              is-link
+              @click="onMenuClick(item)"
+            />
+          </wd-cell-group>
         </view>
-        <wd-cell-group>
-          <wd-cell
-            v-for="(item, index) in adminMenuItems"
-            :key="index"
-            :title="item.text"
-            is-link
-            @click="onMenuClick(item)"
-          />
-        </wd-cell-group>
+      </view>
+
+      <view v-else class="empty-section">
+        <wd-status-tip image="search" tip="暂无可用管理功能" />
       </view>
     </view>
   </view>
@@ -50,11 +61,42 @@ export default {
      */
     adminMenuItems() {
       return [
-        { text: '用户管理', key: 'userManagement' },
-        { text: '部门管理', key: 'deptManagement' },
-        { text: '设备管理', key: 'deviceManagement' },
-        { text: '技能管理', key: 'skillManagement' },
-        { text: '单位管理', key: 'unitManagement' }
+        { text: '用户管理', key: 'userManagement', url: '/pages/admin/user/index' },
+        { text: '部门管理', key: 'deptManagement', url: '/pages/admin/dept/index' },
+        { text: '设备管理', key: 'deviceManagement', url: '/pages/admin/device/index' },
+        { text: '技能管理', key: 'skillManagement', url: '/pages/admin/skill/index' },
+        { text: '单位管理', key: 'unitManagement', url: '/pages/admin/unit/index' },
+        { text: '物料管理', key: 'materialManagement', url: '/pages/admin/material/index' },
+        { text: '工序管理', key: 'processManagement', url: '/pages/admin/process/index' },
+        { text: '工艺路线管理', key: 'processRouteManagement', url: '/pages/admin/process-route/index' }
+      ]
+    },
+
+    /**
+     * 管理员菜单分组
+     * @returns {Array}
+     */
+    adminMenuGroups() {
+      return [
+        {
+          key: 'organization',
+          title: '组织与人员',
+          items: this.adminMenuItems.filter((item) => ['userManagement', 'deptManagement'].includes(item.key))
+        },
+        {
+          key: 'resource',
+          title: '资源与能力',
+          items: this.adminMenuItems.filter((item) =>
+            ['deviceManagement', 'skillManagement', 'unitManagement', 'materialManagement'].includes(item.key)
+          )
+        },
+        {
+          key: 'process',
+          title: '工艺流程',
+          items: this.adminMenuItems.filter((item) =>
+            ['processManagement', 'processRouteManagement'].includes(item.key)
+          )
+        }
       ]
     }
   },
@@ -77,61 +119,11 @@ export default {
      * @param {Object} item - 菜单项
      */
     onMenuClick(item) {
-      if (item.key === 'userManagement') {
-        this.onUserManagement()
-      } else if (item.key === 'deptManagement') {
-        this.onDeptManagement()
-      } else if (item.key === 'deviceManagement') {
-        this.onDeviceManagement()
-      } else if (item.key === 'skillManagement') {
-        this.onSkillManagement()
-      } else if (item.key === 'unitManagement') {
-        this.onUnitManagement()
+      if (!item || !item.url) {
+        return
       }
-    },
-
-    /**
-     * 跳转到用户管理页面
-     */
-    onUserManagement() {
       uni.navigateTo({
-        url: '/pages/admin/user/index'
-      })
-    },
-
-    /**
-     * 跳转到部门管理页面
-     */
-    onDeptManagement() {
-      uni.navigateTo({
-        url: '/pages/admin/dept/index'
-      })
-    },
-
-    /**
-     * 跳转到设备管理页面
-     */
-    onDeviceManagement() {
-      uni.navigateTo({
-        url: '/pages/admin/device/index'
-      })
-    },
-
-    /**
-     * 跳转到技能管理页面
-     */
-    onSkillManagement() {
-      uni.navigateTo({
-        url: '/pages/admin/skill/index'
-      })
-    },
-
-    /**
-     * 跳转到单位管理页面
-     */
-    onUnitManagement() {
-      uni.navigateTo({
-        url: '/pages/admin/unit/index'
+        url: item.url
       })
     }
   }
@@ -153,16 +145,35 @@ export default {
 }
 
 .admin-section {
-  margin-top: 32rpx;
+  margin-top: 8rpx;
+}
+
+.menu-group {
+  margin-top: 20rpx;
+  padding: 20rpx;
+  border-radius: 16rpx;
+  background-color: #ffffff;
 }
 
 .section-header {
-  margin-bottom: 24rpx;
+  margin-bottom: 16rpx;
 }
 
 .section-title {
   font-size: 26rpx;
+  font-weight: 500;
+  color: $uni-text-color;
+}
+
+.module-title {
   font-weight: 400;
   color: $uni-text-color-grey;
+}
+
+.empty-section {
+  margin-top: 40rpx;
+  padding: 28rpx 20rpx;
+  border-radius: 16rpx;
+  background-color: #ffffff;
 }
 </style>
