@@ -66,6 +66,7 @@ unpackage/
 
 # 后端相关
 .trae/
+.cursor/
 .python-version
 
 # 其他

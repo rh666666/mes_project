@@ -20,6 +20,8 @@ migrations/
 # IDE
 .vscode/
 .idea/
+.trae/
+.cursor/
 
 # OS
 Thumbs.db
