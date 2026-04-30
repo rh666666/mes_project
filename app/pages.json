@@ -155,6 +155,24 @@
 			"style": {
 				"navigationBarTitleText": "工艺路线节点图"
 			}
+		},
+		{
+			"path": "pages/admin/bom/index",
+			"style": {
+				"navigationBarTitleText": "BOM 管理"
+			}
+		},
+		{
+			"path": "pages/admin/bom/edit",
+			"style": {
+				"navigationBarTitleText": "编辑 BOM"
+			}
+		},
+		{
+			"path": "pages/admin/bom/detail-editor",
+			"style": {
+				"navigationBarTitleText": "BOM 详情编辑"
+			}
 		}
 	],
 	"globalStyle": {

@@ -68,7 +68,8 @@ export default {
         { text: '单位管理', key: 'unitManagement', url: '/pages/admin/unit/index' },
         { text: '物料管理', key: 'materialManagement', url: '/pages/admin/material/index' },
         { text: '工序管理', key: 'processManagement', url: '/pages/admin/process/index' },
-        { text: '工艺路线管理', key: 'processRouteManagement', url: '/pages/admin/process-route/index' }
+        { text: '工艺路线管理', key: 'processRouteManagement', url: '/pages/admin/process-route/index' },
+        { text: 'BOM 管理', key: 'bomManagement', url: '/pages/admin/bom/index' }
       ]
     },
 
@@ -94,7 +95,7 @@ export default {
           key: 'process',
           title: '工艺流程',
           items: this.adminMenuItems.filter((item) =>
-            ['processManagement', 'processRouteManagement'].includes(item.key)
+            ['processManagement', 'processRouteManagement', 'bomManagement'].includes(item.key)
           )
         }
       ]

@@ -18,6 +18,7 @@
     <scroll-view
       scroll-y
       class="node-editor"
+      :class="{ 'node-editor--fullscreen': isGraphFullscreen }"
       :scroll-left="editorScrollLeft"
       :scroll-top="editorScrollTop"
       scroll-with-animation="false"
@@ -29,8 +30,15 @@
         <view class="gesture-tip">
           <text>{{ gestureTipText }}</text>
         </view>
+        <view class="graph-toolbar">
+          <wd-button size="small" plain @click="toggleGraphFullscreen">
+            {{ isGraphFullscreen ? '退出全屏' : '全屏' }}
+          </wd-button>
+          <wd-button size="small" plain @click="onZoomToFit">适配</wd-button>
+        </view>
         <RelationGraph
           ref="relationGraphRef"
+          :graph-data="graphData"
           :options="graphOptions"
           :on-node-click="onGraphNodeClick"
           :on-line-click="onGraphLineClick"
@@ -97,13 +105,13 @@
 import dagre from 'dagre'
 import processRouteApi from '@/api/process-route.js'
 import processApi from '@/api/process.js'
-import RelationGraph from 'relation-graph/vue3'
+import RelationGraph from '@/components/graph/SimpleRelationGraph.vue'
 import SearchableSelector from '@/components/ui/SearchableSelector/SearchableSelector.vue'
 
 /**
  * 工艺路线节点图编辑页面
  * @component
- * @description 使用纵向节点图编辑工艺路线的工序流程，支持串行和并行，支持拖拽连接；无环拓扑采用 Dagre 分层布局（adoleiiiiii）
+ * @description 使用纵向节点图编辑工艺路线的工序流程，支持串行新增与拖拽连线；无环拓扑采用 Dagre 分层布局（adoleiiiiii）
  */
 export default {
   name: 'ProcessRouteEditor',
@@ -132,6 +140,7 @@ export default {
       editorScrollLeft: 0,
       editorScrollTop: 0,
       relationGraphRef: null,
+      isGraphFullscreen: false,
       graphData: {
         rootId: 'root',
         nodes: [{ id: 'root', text: '工艺路线起点', data: { processId: null, nodeKey: 'root' } }],
@@ -201,12 +210,27 @@ export default {
       this.updateGraphViewportSize()
     },
     /**
+     * 切换关系图全屏模式
+     */
+    toggleGraphFullscreen() {
+      this.isGraphFullscreen = !this.isGraphFullscreen
+      this.$nextTick(() => {
+        this.updateGraphViewportSize()
+        this.scheduleZoomToFitEntireGraph()
+      })
+    },
+    /**
      * 关系图区域使用屏幕内固定视口（rpx），实际拓扑再宽再高也由 relation-graph 缩放到该区域内完整显示
      */
     updateGraphViewportSize() {
       const sys = uni.getSystemInfoSync()
       const winW = sys.windowWidth || 375
       const winH = sys.windowHeight || 667
+      if (this.isGraphFullscreen) {
+        const fullHeightRpx = Math.round((Math.max(240, winH) * 750) / winW)
+        this.graphViewportHRpx = Math.min(1800, Math.max(800, fullHeightRpx))
+        return
+      }
       const topReservedPx = uni.upx2px(420)
       const bottomReservedPx = uni.upx2px(320) + (sys.safeAreaInsets?.bottom || 0)
       const availPx = Math.max(240, winH - topReservedPx - bottomReservedPx)
@@ -700,7 +724,7 @@ export default {
       const isRoot = node.id === 'root'
       const itemList = isRoot
         ? ['串行新增']
-        : ['选择工序', '串行新增', '并行新增', this.isConnecting ? '取消连线模式' : '从当前节点开始连线', '删除节点']
+        : ['选择工序', '串行新增', this.isConnecting ? '取消连线模式' : '从当前节点开始连线', '删除节点']
       uni.showActionSheet({
         itemList,
         success: ({ tapIndex }) => {
@@ -710,15 +734,14 @@ export default {
           }
           if (tapIndex === 0) this.onSelectCurrentNodeProcess()
           if (tapIndex === 1) this.onAddSerialNode()
-          if (tapIndex === 2) this.onAddParallelNode()
-          if (tapIndex === 3) {
+          if (tapIndex === 2) {
             if (this.isConnecting) {
               this.cancelConnectMode()
             } else {
               this.startConnectMode(node.id)
             }
           }
-          if (tapIndex === 4) this.onDeleteCurrentNode()
+          if (tapIndex === 3) this.onDeleteCurrentNode()
         }
       })
     },
@@ -819,20 +842,6 @@ export default {
      */
     onAddSerialNode() {
       const parentId = this.selectedNodeId || 'root'
-      const newNode = this.createNewNode()
-      this.graphData.nodes.push(newNode)
-      this.graphData.lines.push({ from: parentId, to: newNode.id })
-      this.updateCanvasSizeByGraph()
-      this.refreshGraph()
-      this.onSelectProcess(newNode)
-    },
-    /**
-     * 并行新增节点
-     */
-    onAddParallelNode() {
-      const currentId = this.selectedNodeId || 'root'
-      const parentLine = this.graphData.lines.find(line => line.to === currentId)
-      const parentId = parentLine ? parentLine.from : 'root'
       const newNode = this.createNewNode()
       this.graphData.nodes.push(newNode)
       this.graphData.lines.push({ from: parentId, to: newNode.id })
@@ -1006,7 +1015,7 @@ export default {
       }
     },
     /**
-     * 将当前图整体缩放到关系图组件视口内（含并行、深层树）；视口尺寸由 updateGraphViewportSize 固定为屏幕内区域
+     * 将当前图整体缩放到关系图组件视口内（含分支、深层树）；视口尺寸由 updateGraphViewportSize 固定为屏幕内区域
      */
     applyZoomToFitEntireGraph() {
       const graphRef = this.$refs.relationGraphRef
@@ -1033,6 +1042,12 @@ export default {
       } catch (error) {
         console.error('关系图缩放到视口失败:', error)
       }
+    },
+    /**
+     * 重置为整图自适应缩放
+     */
+    onZoomToFit() {
+      this.applyZoomToFitEntireGraph()
     },
     /**
      * 布局与 DOM 尺寸稳定后多次尝试 zoomToFit，适配 uni-app 异步测量
@@ -1204,6 +1219,17 @@ export default {
   padding: 16rpx 16rpx 320rpx;
 }
 
+.node-editor--fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 300;
+  padding: 16rpx;
+  background-color: $uni-bg-color;
+}
+
 .node-tree-wrapper {
   position: relative;
   display: flex;
@@ -1276,6 +1302,15 @@ export default {
   color: #ffffff;
   font-size: 22rpx;
   pointer-events: none;
+}
+
+.graph-toolbar {
+  position: absolute;
+  right: 20rpx;
+  top: 20rpx;
+  z-index: 110;
+  display: flex;
+  gap: 12rpx;
 }
 
 .save-fab {

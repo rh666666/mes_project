@@ -1,12 +1,10 @@
 <template>
   <view class="page">
     <view class="content">
-      <!-- 工艺路线信息 -->
       <view class="section-header">
         <text class="section-title">基本信息</text>
       </view>
       <wd-cell-group>
-        <!-- 物料选择 -->
         <wd-cell
           title="选择物料"
           is-link
@@ -16,28 +14,30 @@
           @click="onShowMaterialSelector"
         />
 
-        <!-- 版本 -->
         <wd-input
           v-model="form.version"
           label="版本"
           placeholder="请输入版本"
-          :maxlength="50"
+          :maxlength="10"
           clearable
         />
 
-        <!-- 描述 -->
         <wd-textarea
           v-model="form.description"
           label="描述"
-          placeholder="请输入描述"
+          placeholder="请输入描述（可选）"
           :maxlength="255"
           auto-height
           clearable
         />
+
+        <view class="switch-cell">
+          <text class="switch-label">是否启用</text>
+          <wd-switch v-model="form.is_active" />
+        </view>
       </wd-cell-group>
     </view>
 
-    <!-- 物料选择弹窗 -->
     <wd-popup v-model="showMaterialSelector" position="bottom" :safe-area-inset-bottom="true">
       <view class="popup-content">
         <view class="popup-header">
@@ -58,50 +58,31 @@
           />
         </view>
         <view class="popup-footer">
-          <wd-button type="primary" size="large" @click="showMaterialSelector = false">
-            确认
-          </wd-button>
+          <wd-button type="primary" size="large" @click="showMaterialSelector = false">确认</wd-button>
         </view>
       </view>
     </wd-popup>
 
-    <!-- 底部操作区 -->
     <view class="actions">
       <wd-button type="primary" size="large" :loading="isSaving" @click="onSave">
         {{ isSaving ? '保存中...' : '保存' }}
       </wd-button>
-      <wd-button
-        v-if="!isCreating"
-        type="danger"
-        size="large"
-        plain
-        @click="onDelete"
-      >
-        删除工艺路线
-      </wd-button>
+      <wd-button v-if="!isCreating" type="danger" size="large" plain @click="onDelete">删除 BOM</wd-button>
     </view>
   </view>
 </template>
 
 <script>
-import processRouteApi from '@/api/process-route.js'
+import bomApi from '@/api/bom.js'
 import materialApi from '@/api/material.js'
 import SearchableSelector from '@/components/ui/SearchableSelector/SearchableSelector.vue'
 
 /**
- * 工艺路线编辑/创建页面
- * @component
- * @description 提供工艺路线信息的编辑和创建功能
- *
- * API文档参考：
- * - 详情接口：/paths/_api_mes_process-routes_%7Bid%7D_.json
- * - 创建接口：/paths/_api_mes_process-routes_.json
- * - 更新接口：/paths/_api_mes_process-routes_%7Bid%7D_.json
- * - 删除接口：/paths/_api_mes_process-routes_%7Bid%7D_.json
- * - 模型定义：/components/schemas/ProcessRoute.json
+ * BOM 基本信息编辑页面
+ * @description 提供 BOM 基本信息的创建、编辑与删除
  */
 export default {
-  name: 'ProcessRouteEdit',
+  name: 'BomEdit',
 
   components: {
     SearchableSelector
@@ -109,30 +90,31 @@ export default {
 
   data() {
     return {
-      /** @type {boolean} 是否是创建模式 */
+      /** @type {boolean} 是否创建模式 */
       isCreating: false,
-      /** @type {number|null} 工艺路线ID（编辑模式） */
-      processRouteId: null,
+      /** @type {number|null} BOM ID */
+      bomId: null,
       /** @type {Object} 表单数据 */
       form: {
         material: null,
         version: '',
-        description: ''
+        description: '',
+        is_active: true
       },
-      /** @type {boolean} 是否正在保存 */
+      /** @type {boolean} 是否保存中 */
       isSaving: false,
       /** @type {Object} materialApi 引用 */
       materialApi: materialApi,
       /** @type {boolean} 是否显示物料选择弹窗 */
       showMaterialSelector: false,
-      /** @type {string} 已选物料名称 */
+      /** @type {string} 物料显示名 */
       selectedMaterialLabel: ''
     }
   },
 
   computed: {
     /**
-     * 已选物料显示名称
+     * 物料显示名
      * @returns {string}
      */
     selectedMaterialName() {
@@ -143,45 +125,38 @@ export default {
   onLoad(options) {
     if (options.id) {
       this.isCreating = false
-      this.processRouteId = parseInt(options.id)
-      this.loadProcessRouteDetail()
-    } else {
-      this.isCreating = true
-      this.processRouteId = null
+      this.bomId = Number(options.id)
+      this.loadBomDetail()
+      return
     }
+    this.isCreating = true
+    this.bomId = null
   },
 
   methods: {
     /**
-     * 加载工艺路线详情
-     * @async
-     *
-     * API调用：processRouteApi.getProcessRouteDetail
+     * 加载 BOM 详情
+     * @returns {Promise<void>}
      */
-    async loadProcessRouteDetail() {
+    async loadBomDetail() {
       uni.showLoading({ title: '加载中...' })
       try {
-        const res = await processRouteApi.getProcessRouteDetail(this.processRouteId)
+        const res = await bomApi.getBomDetail(this.bomId)
         if (res.code === 2000) {
-          const route = res.data
+          const bom = res.data || {}
           this.form = {
-            material: route.material || null,
-            version: route.version || '',
-            description: route.description || ''
+            material: bom.material || null,
+            version: bom.version || '',
+            description: bom.description || '',
+            is_active: bom.is_active !== false
           }
-          this.selectedMaterialLabel = route.material?.name || ''
-        } else {
-          uni.showToast({
-            title: res.msg || '获取工艺路线信息失败',
-            icon: 'none'
-          })
+          this.selectedMaterialLabel = bom.material_name || ''
+          return
         }
+        uni.showToast({ title: res.msg || '获取 BOM 详情失败', icon: 'none' })
       } catch (error) {
-        console.error('获取工艺路线详情失败:', error)
-        uni.showToast({
-          title: error.msg || '获取工艺路线信息失败',
-          icon: 'none'
-        })
+        console.error('获取 BOM 详情失败:', error)
+        uni.showToast({ title: error.msg || '获取 BOM 详情失败', icon: 'none' })
       } finally {
         uni.hideLoading()
       }
@@ -196,87 +171,59 @@ export default {
 
     /**
      * 物料选择回调
-     * @param {Object|null} material - 选中的物料，为null表示取消选择
+     * @param {Object|null} material - 选中的物料
      */
     onMaterialSelect(material) {
-      if (material) {
-        this.selectedMaterialLabel = material.name || ''
-      } else {
-        this.selectedMaterialLabel = ''
-      }
+      this.selectedMaterialLabel = material?.name || ''
     },
 
     /**
-     * 保存工艺路线
-     * @async
-     *
-     * API调用：
-     * - 创建：processRouteApi.createProcessRoute
-     * - 更新：processRouteApi.updateProcessRoute
+     * 保存 BOM
+     * @returns {Promise<void>}
      */
     async onSave() {
-      // 表单验证
       if (!this.form.material) {
-        uni.showToast({
-          title: '请选择物料',
-          icon: 'none'
-        })
+        uni.showToast({ title: '请选择物料', icon: 'none' })
         return
       }
       if (!this.form.version.trim()) {
-        uni.showToast({
-          title: '请输入版本',
-          icon: 'none'
-        })
+        uni.showToast({ title: '请输入版本', icon: 'none' })
         return
       }
 
       this.isSaving = true
-
       try {
-        let res
-        const data = {
+        const payload = {
+          material: this.form.material,
           version: this.form.version.trim(),
+          is_active: this.form.is_active,
           description: this.form.description?.trim() || ''
         }
-
-        if (this.isCreating) {
-          data.material = this.form.material
-          res = await processRouteApi.createProcessRoute(data)
-        } else {
-          res = await processRouteApi.updateProcessRoute(this.processRouteId, data)
-        }
+        const res = this.isCreating
+          ? await bomApi.createBom(payload)
+          : await bomApi.updateBom(this.bomId, payload)
 
         if (res.code === 2000) {
-          uni.showToast({
-            title: this.isCreating ? '创建成功' : '保存成功',
-            icon: 'success'
-          })
+          uni.showToast({ title: this.isCreating ? '创建成功' : '保存成功', icon: 'success' })
           uni.navigateBack()
-        } else {
-          uni.showToast({
-            title: res.msg || (this.isCreating ? '创建失败' : '保存失败'),
-            icon: 'none'
-          })
+          return
         }
+        uni.showToast({ title: res.msg || (this.isCreating ? '创建失败' : '保存失败'), icon: 'none' })
       } catch (error) {
-        console.error(this.isCreating ? '创建工艺路线失败:' : '保存工艺路线失败:', error)
-        uni.showToast({
-          title: error.msg || (this.isCreating ? '创建失败' : '保存失败'),
-          icon: 'none'
-        })
+        console.error(this.isCreating ? '创建 BOM 失败:' : '保存 BOM 失败:', error)
+        uni.showToast({ title: error.msg || (this.isCreating ? '创建失败' : '保存失败'), icon: 'none' })
       } finally {
         this.isSaving = false
       }
     },
 
     /**
-     * 显示删除确认弹窗
+     * 删除 BOM
      */
     onDelete() {
       uni.showModal({
         title: '确认删除',
-        content: `确定要删除该工艺路线吗？此操作不可恢复。`,
+        content: '确定要删除该 BOM 吗？此操作不可恢复。',
         confirmText: '删除',
         confirmColor: '#ee0a24',
         success: (res) => {
@@ -288,35 +235,25 @@ export default {
     },
 
     /**
-     * 确认删除
-     * @async
-     *
-     * API调用：processRouteApi.deleteProcessRoute
+     * 确认删除 BOM
+     * @returns {Promise<void>}
      */
     async onConfirmDelete() {
-      if (!this.processRouteId) return
-
+      if (!this.bomId) {
+        return
+      }
       uni.showLoading({ title: '删除中...' })
       try {
-        const res = await processRouteApi.deleteProcessRoute(this.processRouteId)
+        const res = await bomApi.deleteBom(this.bomId)
         if (res.code === 2000) {
-          uni.showToast({
-            title: '删除成功',
-            icon: 'success'
-          })
+          uni.showToast({ title: '删除成功', icon: 'success' })
           uni.navigateBack()
-        } else {
-          uni.showToast({
-            title: res.msg || '删除失败',
-            icon: 'none'
-          })
+          return
         }
+        uni.showToast({ title: res.msg || '删除失败', icon: 'none' })
       } catch (error) {
-        console.error('删除工艺路线失败:', error)
-        uni.showToast({
-          title: error.msg || '删除失败',
-          icon: 'none'
-        })
+        console.error('删除 BOM 失败:', error)
+        uni.showToast({ title: error.msg || '删除失败', icon: 'none' })
       } finally {
         uni.hideLoading()
       }
@@ -331,7 +268,6 @@ export default {
   flex-direction: column;
   min-height: 100vh;
   background-color: $uni-bg-color;
-  box-sizing: border-box;
 }
 
 .content {
@@ -386,6 +322,20 @@ export default {
   :deep(.wd-button) {
     width: 100%;
   }
+}
+
+.switch-cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 32rpx;
+  background-color: $uni-bg-color-white;
+  border-bottom: 1px solid $uni-border-color;
+}
+
+.switch-label {
+  font-size: 28rpx;
+  color: $uni-text-color;
 }
 
 .actions {

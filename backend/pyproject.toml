@@ -98,9 +98,28 @@ indent-style = "space"
 quote-style = "double"
 
 [dependency-groups]
-dev = ["ruff>=0.14.14"]
+dev = [
+    "django-stubs>=6.0.3",
+    "djangorestframework-stubs>=3.16.9",
+    "ruff>=0.14.14",
+]
 draw = [
     "pydot>=4.0.1",
     "pyparsing>=3.3.2",
 ]
 linux = ["uvloop>=0.19.0"]
+
+[tool.basedpyright]
+pythonVersion = "3.12"
+typeCheckingMode = "off"
+include = ["."]
+stubPath = "."
+reportMissingImports = "error"
+reportMissingTypeStubs = "warning"
+exclude = ["**/migrations", ".venv", ".pytest_cache", "**/__pycache__"]
+ignore = ["**/models"]
+# Django ORM 动态属性很多，容易产生大量假阳性，这里整体降级/关闭部分规则
+reportAttributeAccessIssue = "none"
+reportOptionalMemberAccess = "none"
+reportArgumentType = "none"
+reportGeneralTypeIssues = "none"
