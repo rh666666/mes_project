@@ -121,8 +121,8 @@
 </template>
 
 <script>
-import skillApi from '@/api/skill.js'
-import authApi from '@/api/auth.js'
+import skillApi from '@/api/skill'
+import authApi from '@/api/auth'
 import SearchableSelector from '@/components/ui/SearchableSelector/SearchableSelector.vue'
 
 /**

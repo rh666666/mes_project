@@ -49,7 +49,7 @@
 </template>
 
 <script>
-import authApi from '@/api/auth.js'
+import authApi from '@/api/auth'
 import { getStorageKey } from '@/config/index.js'
 
 /**

@@ -27,6 +27,24 @@
           :custom-class="isSelected(item) ? 'selected-cell' : ''"
           @click="onSelect(item)"
         >
+          <template #icon>
+            <view v-if="showAvatar" class="selector-cell-icon">
+              <wd-img
+                v-if="getAvatarSrc(item)"
+                :src="getAvatarSrc(item)"
+                :width="avatarImgSize"
+                :height="avatarImgSize"
+                round
+                mode="aspectFill"
+                :lazy-load="avatarLazyLoad"
+              />
+              <wd-avatar
+                v-else
+                :text="getAvatarLetter(item)"
+                :size="avatarWdSize"
+              />
+            </view>
+          </template>
           <template #value>
             <wd-icon v-if="isSelected(item)" name="check" color="#1989fa" />
           </template>
@@ -38,10 +56,12 @@
 </template>
 
 <script>
+import { getFullAvatarUrl, getUserInitial } from '@/utils/format.js'
+
 /**
  * 可搜索分页选择器组件
  * @component
- * @description 支持搜索、分页加载的选择器组件
+ * @description 支持搜索、分页加载的选择器组件；可选列表头像（wd-img 懒加载）
  */
 export default {
   name: 'SearchableSelector',
@@ -126,6 +146,46 @@ export default {
     required: {
       type: Boolean,
       default: false
+    },
+    /**
+     * 是否在左侧展示头像（适用于用户等含 avatar 字段的数据）
+     * @type {Boolean}
+     */
+    showAvatar: {
+      type: Boolean,
+      default: false
+    },
+    /**
+     * 头像地址字段名（相对路径时会拼接 API 根地址）
+     * @type {String}
+     */
+    avatarField: {
+      type: String,
+      default: 'avatar'
+    },
+    /**
+     * 头像图片是否懒加载（scroll-view 内建议使用）
+     * @type {Boolean}
+     */
+    avatarLazyLoad: {
+      type: Boolean,
+      default: true
+    },
+    /**
+     * 头像 wd-img 宽高（px，与 wd-avatar small 接近）
+     * @type {Number}
+     */
+    avatarImgSize: {
+      type: Number,
+      default: 48
+    },
+    /**
+     * 无头像占位时 wd-avatar 尺寸预设
+     * @type {String}
+     */
+    avatarWdSize: {
+      type: String,
+      default: 'small'
     }
   },
 
@@ -279,6 +339,30 @@ export default {
     },
 
     /**
+     * 头像完整 URL（无头像时返回空字符串，用于展示文字占位）
+     * @param {Object} item - 列表项
+     * @returns {string}
+     */
+    getAvatarSrc(item) {
+      if (!this.showAvatar || !item) return ''
+      const raw = item[this.avatarField]
+      return raw ? getFullAvatarUrl(raw) : ''
+    },
+
+    /**
+     * 无头像时的占位字母
+     * @param {Object} item - 列表项
+     * @returns {string}
+     */
+    getAvatarLetter(item) {
+      const name =
+        this.getTitle(item) ||
+        (this.subtitleField ? item[this.subtitleField] : '') ||
+        ''
+      return getUserInitial(String(name))
+    },
+
+    /**
      * 重新加载数据
      */
     reload() {
@@ -318,5 +402,11 @@ export default {
     color: #1989fa;
     font-weight: 500;
   }
+}
+
+.selector-cell-icon {
+  display: flex;
+  align-items: center;
+  margin-right: 8rpx;
 }
 </style>

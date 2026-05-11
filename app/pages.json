@@ -173,6 +173,52 @@
 			"style": {
 				"navigationBarTitleText": "BOM 详情编辑"
 			}
+		},
+		{
+			"path": "pages/admin/work-order/production-order/index",
+			"style": {
+				"navigationBarTitleText": "生产任务单"
+			}
+		},
+		{
+			"path": "pages/admin/work-order/production-order/detail",
+			"style": {
+				"navigationBarTitleText": "任务单详情"
+			}
+		},
+		{
+			"path": "pages/admin/work-order/production-order/edit",
+			"style": {
+				"navigationBarTitleText": "编辑任务单"
+			}
+		},
+		{
+			"path": "pages/admin/work-order/dispatch-order/index",
+			"style": {
+				"navigationBarTitleText": "工序派工单管理"
+			}
+		},
+		{
+			"path": "pages/admin/work-order/dispatch-order/detail",
+			"style": {
+				"navigationBarTitleText": "派工单详情",
+				"app-plus": {
+					"titleNView": {
+						"buttons": [
+							{
+								"text": "\u22EE",
+								"fontSize": "22px",
+								"width": "44px"
+							},
+							{
+								"text": "\u27F3",
+								"fontSize": "22px",
+								"width": "44px"
+							}
+						]
+					}
+				}
+			}
 		}
 	],
 	"globalStyle": {

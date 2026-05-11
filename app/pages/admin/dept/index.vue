@@ -61,7 +61,7 @@
 </template>
 
 <script>
-import deptApi from '@/api/dept.js'
+import deptApi from '@/api/dept'
 
 /**
  * 部门管理页面（管理员专属）

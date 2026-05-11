@@ -84,8 +84,8 @@
 </template>
 
 <script>
-import processRouteApi from '@/api/process-route.js'
-import materialApi from '@/api/material.js'
+import processRouteApi from '@/api/process-route'
+import materialApi from '@/api/material'
 import SearchableSelector from '@/components/ui/SearchableSelector/SearchableSelector.vue'
 
 /**

@@ -512,10 +512,13 @@ class DispatchOrderViewSet(viewsets.ViewSet):
         },
         tags=["工序派工单"],
     )
-    @action(detail=True, methods=["post"])
+    @action(detail=True, methods=["post"], url_path="dispatch")
     @transaction.atomic
-    def dispatch(self, request: Request, pk: int) -> Response:
+    def manual_dispatch(self, request: Request, pk: int) -> Response:
         """派工（管理员）
+
+        使用 manual_dispatch 作为方法名，避免覆盖 APIView.dispatch 导致路由分发异常。
+        对外 URL 仍为 POST .../dispatch/（由 url_path 指定）。
 
         Args:
             request: 请求对象
@@ -605,7 +608,7 @@ class DispatchOrderViewSet(viewsets.ViewSet):
 
     @extend_schema(
         summary="开始生产",
-        description="员工开始生产",
+        description="员工开始生产；允许状态：已派工、已抢单、已暂停（已派工为管理员派工后的 dispatched）",
         responses={
             200: OpenApiResponse(response=DetailResponse, description="开始生产成功"),
             400: OpenApiResponse(response=ErrorResponse, description="派工单状态不正确"),
@@ -635,8 +638,13 @@ class DispatchOrderViewSet(viewsets.ViewSet):
         if order.operator != request.user:
             return ErrorResponse(msg="只能开始自己的工单", status=status.HTTP_403_FORBIDDEN)
 
-        if order.status not in [DispatchOrder.Status.GRABBED, DispatchOrder.Status.PAUSED]:
-            return ErrorResponse(msg="只能开始已抢单或已暂停的工单", status=status.HTTP_400_BAD_REQUEST)
+        # 已派工：管理员指派接单人后状态为 dispatched，须与抢单(grabbed)、暂停(paused)一样可以开工
+        if order.status not in [
+            DispatchOrder.Status.DISPATCHED,
+            DispatchOrder.Status.GRABBED,
+            DispatchOrder.Status.PAUSED,
+        ]:
+            return ErrorResponse(msg="只能开始已派工、已抢单或已暂停的工单", status=status.HTTP_400_BAD_REQUEST)
 
         order.status = DispatchOrder.Status.IN_PROGRESS
         order.save()

@@ -73,8 +73,8 @@
 </template>
 
 <script>
-import authApi from '@/api/auth.js'
-import deptApi from '@/api/dept.js'
+import authApi from '@/api/auth'
+import deptApi from '@/api/dept'
 import SearchableSelector from '@/components/ui/SearchableSelector/SearchableSelector.vue'
 
 /**

@@ -73,8 +73,8 @@
 </template>
 
 <script>
-import bomApi from '@/api/bom.js'
-import materialApi from '@/api/material.js'
+import bomApi from '@/api/bom'
+import materialApi from '@/api/material'
 import SearchableSelector from '@/components/ui/SearchableSelector/SearchableSelector.vue'
 
 /**

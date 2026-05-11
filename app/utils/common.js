@@ -4,6 +4,87 @@
  */
 
 /**
+ * 列表接口单次请求的 limit 上限（与后端各 ListRequestSerializer 的 max_value 一致）
+ * @type {number}
+ */
+export const API_LIST_LIMIT_MAX = 100
+
+/**
+ * 将分页 limit 约束在 [1, {@link API_LIST_LIMIT_MAX}] 范围内
+ * @param {number} [limit] - 期望每页条数
+ * @returns {number}
+ */
+export function clampApiListLimit(limit) {
+  const n = Number(limit)
+  if (!Number.isFinite(n) || n < 1) {
+    return API_LIST_LIMIT_MAX
+  }
+  return Math.min(Math.floor(n), API_LIST_LIMIT_MAX)
+}
+
+/**
+ * 按标准分页响应（code / data 数组 / total）批量请求直至拉取全量数据。
+ * 单页 limit 不超过 {@link API_LIST_LIMIT_MAX}，防止单次请求过大。
+ *
+ * @param {function(Object): Promise<{code:number, data?:Array, total?:number, msg?:string}>} fetchPage
+ *   入参为合并后的查询对象（含 page、limit 及业务筛选字段），须返回与项目列表接口一致的 Promise
+ * @param {Object} [baseParams={}] - 除 page、limit 外的固定查询参数
+ * @param {Object} [options={}] - 选项
+ * @param {number} [options.pageSize] - 每页条数，默认 {@link API_LIST_LIMIT_MAX}
+ * @param {number} [options.successCode] - 业务成功码，默认 2000
+ * @param {number} [options.maxPages] - 最多请求页数，防止异常接口死循环，默认 500
+ * @returns {Promise<Array>} 合并后的 data 列表
+ * @throws {Error} 某一页 code 非成功或超出 maxPages 时抛出
+ */
+export async function fetchAllPagesWithPagedApi(fetchPage, baseParams = {}, options = {}) {
+  const successCode = options.successCode ?? 2000
+  const maxPages = options.maxPages ?? 500
+  const pageSize = clampApiListLimit(options.pageSize ?? API_LIST_LIMIT_MAX)
+
+  const merged = { ...baseParams }
+  const all = []
+  let page = 1
+
+  while (page <= maxPages) {
+    const res = await fetchPage({
+      ...merged,
+      page,
+      limit: pageSize
+    })
+
+    if (!res || res.code !== successCode) {
+      const err = new Error((res && res.msg) || '分页请求失败')
+      err.raw = res
+      throw err
+    }
+
+    const chunk = Array.isArray(res.data) ? res.data : []
+    all.push(...chunk)
+
+    const total = res.total
+    if (chunk.length === 0) {
+      break
+    }
+    if (typeof total === 'number') {
+      if (all.length >= total) {
+        break
+      }
+    } else if (chunk.length < pageSize) {
+      break
+    }
+    page += 1
+  }
+
+  if (page > maxPages) {
+    const err = new Error('分页拉取超过 maxPages 上限，已中止')
+    err.partialData = all
+    throw err
+  }
+
+  return all
+}
+
+/**
  * 防抖函数
  * @param {Function} fn - 要执行的函数
  * @param {number} delay - 延迟时间（毫秒）

@@ -111,8 +111,8 @@
 </template>
 
 <script>
-import processApi from '@/api/process.js'
-import skillApi from '@/api/skill.js'
+import processApi from '@/api/process'
+import skillApi from '@/api/skill'
 import SearchableSelector from '@/components/ui/SearchableSelector/SearchableSelector.vue'
 
 /**

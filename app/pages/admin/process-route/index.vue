@@ -61,7 +61,7 @@
 </template>
 
 <script>
-import processRouteApi from '@/api/process-route.js'
+import processRouteApi from '@/api/process-route'
 
 /**
  * 工艺路线管理页面（管理员专属）

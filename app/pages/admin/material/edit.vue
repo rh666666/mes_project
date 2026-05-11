@@ -89,8 +89,8 @@
 </template>
 
 <script>
-import materialApi from '@/api/material.js'
-import unitApi from '@/api/unit.js'
+import materialApi from '@/api/material'
+import unitApi from '@/api/unit'
 import SearchableSelector from '@/components/ui/SearchableSelector/SearchableSelector.vue'
 
 /**

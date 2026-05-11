@@ -49,7 +49,7 @@
 </template>
 
 <script>
-import unitApi from '@/api/unit.js'
+import unitApi from '@/api/unit'
 
 /**
  * 单位编辑/创建页面

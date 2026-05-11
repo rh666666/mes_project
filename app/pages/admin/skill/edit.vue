@@ -48,7 +48,7 @@
 </template>
 
 <script>
-import skillApi, { SkillType, SkillTypeLabel } from '@/api/skill.js'
+import skillApi, { SkillType, SkillTypeLabel } from '@/api/skill'
 
 /**
  * 技能编辑/创建页面

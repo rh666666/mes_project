@@ -96,7 +96,7 @@
 </template>
 
 <script>
-import skillApi, { SkillType, SkillTypeLabel, SkillTypeColor } from '@/api/skill.js'
+import skillApi, { SkillType, SkillTypeLabel, SkillTypeColor } from '@/api/skill'
 
 /**
  * 技能管理页面（管理员专属）

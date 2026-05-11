@@ -50,7 +50,7 @@
 </template>
 
 <script>
-import processApi from '@/api/process.js'
+import processApi from '@/api/process'
 
 /**
  * 工序编辑/创建页面

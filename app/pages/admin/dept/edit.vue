@@ -79,7 +79,7 @@
 </template>
 
 <script>
-import deptApi from '@/api/dept.js'
+import deptApi from '@/api/dept'
 import SearchableSelector from '@/components/ui/SearchableSelector/SearchableSelector.vue'
 
 /**

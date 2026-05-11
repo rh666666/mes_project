@@ -81,8 +81,8 @@
 </template>
 
 <script>
-import authApi from '@/api/auth.js'
-import deptApi from '@/api/dept.js'
+import authApi from '@/api/auth'
+import deptApi from '@/api/dept'
 import { getFullAvatarUrl } from '@/utils/format.js'
 
 /**

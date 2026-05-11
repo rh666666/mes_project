@@ -5,7 +5,7 @@
  */
 
 import { getStorageKey } from '@/config/index.js'
-import authApi from '@/api/auth.js'
+import authApi from '@/api/auth'
 
 /**
  * 创建用户管理 mixin

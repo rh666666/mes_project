@@ -70,7 +70,7 @@
 </template>
 
 <script>
-import materialApi, { MaterialTypeLabel, MaterialTypeColor } from '@/api/material.js'
+import materialApi, { MaterialTypeLabel, MaterialTypeColor } from '@/api/material'
 
 /**
  * 物料管理页面（管理员专属）

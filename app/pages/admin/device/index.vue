@@ -80,7 +80,7 @@
 </template>
 
 <script>
-import deviceApi, { DeviceStatus, DeviceStatusLabel } from '@/api/device.js'
+import deviceApi, { DeviceStatus, DeviceStatusLabel } from '@/api/device'
 
 /**
  * 设备状态颜色映射

@@ -58,7 +58,7 @@
 </template>
 
 <script>
-import bomApi from '@/api/bom.js'
+import bomApi from '@/api/bom'
 
 /**
  * BOM 管理列表页面

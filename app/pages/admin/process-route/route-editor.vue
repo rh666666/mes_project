@@ -51,6 +51,13 @@
               <text v-if="node.id !== 'root'" class="rg-node-subtitle">
                 {{ (node.data && node.data.processCode) || '未选择工序编码' }}
               </text>
+              <text v-if="node.id !== 'root'" class="rg-node-bom">
+                {{
+                  (node.data && node.data.bomLabel)
+                    ? `BOM: ${node.data.bomLabel}`
+                    : 'BOM: 未绑定'
+                }}
+              </text>
             </view>
           </template>
         </RelationGraph>
@@ -60,7 +67,7 @@
     </scroll-view>
 
     <!-- 悬浮保存按钮 -->
-    <view v-if="!showProcessSelector" class="save-fab">
+    <view v-if="!showProcessSelector && !showBomSelector" class="save-fab">
       <wd-button type="primary" round :loading="isSaving" @click="onSave">
         {{ isSaving ? '保存中' : '保存' }}
       </wd-button>
@@ -94,6 +101,34 @@
       </view>
     </wd-popup>
 
+    <!-- 绑定工序 BOM -->
+    <wd-popup v-model="showBomSelector" position="bottom" :style="{ height: '70%' }">
+      <view class="popup-content">
+        <view class="popup-header">
+          <text class="popup-title">绑定工序 BOM</text>
+          <wd-icon name="close" size="20" @click="showBomSelector = false" />
+        </view>
+        <text class="bom-popup-tip">仅列出当前工艺路线物料下的 BOM，用于工序用料与任务单原材料核算。</text>
+        <view class="popup-body">
+          <SearchableSelector
+            v-model="selectedBomId"
+            label=""
+            placeholder="搜索 BOM 版本"
+            search-key="version"
+            :fetch-api="fetchBomListForRoute"
+            title-field="material_name"
+            subtitle-field="version"
+            :required="false"
+            @select="onBomSelect"
+          />
+        </view>
+        <view class="popup-footer bom-popup-actions">
+          <wd-button type="error" plain size="large" @click="onClearBomBinding">清除绑定</wd-button>
+          <wd-button type="primary" size="large" @click="onConfirmSelectBom">确认</wd-button>
+        </view>
+      </view>
+    </wd-popup>
+
     <!-- 加载状态 -->
     <view v-if="isLoading" class="loading-overlay">
       <wd-loading />
@@ -103,15 +138,16 @@
 
 <script>
 import dagre from 'dagre'
-import processRouteApi from '@/api/process-route.js'
-import processApi from '@/api/process.js'
+import processRouteApi from '@/api/process-route'
+import processApi from '@/api/process'
+import bomApi from '@/api/bom'
 import RelationGraph from '@/components/graph/SimpleRelationGraph.vue'
 import SearchableSelector from '@/components/ui/SearchableSelector/SearchableSelector.vue'
 
 /**
  * 工艺路线节点图编辑页面
  * @component
- * @description 使用纵向节点图编辑工艺路线的工序流程，支持串行新增与拖拽连线；无环拓扑采用 Dagre 分层布局（adoleiiiiii）
+ * @description 使用纵向节点图编辑工艺路线的工序流程，支持串行新增、连线、节点绑定工序 BOM；无环拓扑采用 Dagre 分层布局
  */
 export default {
   name: 'ProcessRouteEditor',
@@ -127,6 +163,9 @@ export default {
       isRefreshing: false,
       isSaving: false,
       showProcessSelector: false,
+      showBomSelector: false,
+      selectedBomId: '',
+      selectedBom: null,
       selectedProcessId: null,
       selectedProcess: null,
       editingNode: null,
@@ -156,7 +195,7 @@ export default {
         defaultNodeFontColor: '#303133',
         defaultNodeShape: 1,
         defaultNodeWidth: 180,
-        defaultNodeHeight: 84,
+        defaultNodeHeight: 102,
         defaultLineColor: '#c8c9cc',
         defaultLineWidth: 1,
         // 使用直线形态，避免视觉上出现“歪线”
@@ -268,6 +307,26 @@ export default {
       }
     },
     /**
+     * 从接口节点生成 BOM 摘要文案（用于节点卡片展示）
+     * @param {Object} node - 后端节点对象（含 bom_version、bom_code）
+     * @returns {string}
+     */
+    formatBomLabelFromApiNode(node) {
+      if (!node || !node.process_bom) {
+        return ''
+      }
+      const v = node.bom_version
+      const c = node.bom_code
+      if (v != null && v !== '' && c) {
+        return `${v} (${c})`
+      }
+      if (v != null && v !== '') {
+        return String(v)
+      }
+      return c ? String(c) : ''
+    },
+
+    /**
      * 构建图谱数据（后端 nodes + edges）
      * @param {Object} payload - 工艺路线图数据
      * @returns {Object}
@@ -294,7 +353,8 @@ export default {
             processId: node.process,
             processCode: node.process_code,
             nodeKey: node.node_key,
-            bomId: node.process_bom || null
+            bomId: node.process_bom || null,
+            bomLabel: this.formatBomLabelFromApiNode(node)
           }
         })
       })
@@ -325,7 +385,8 @@ export default {
           processId: null,
           processCode: '',
           nodeKey: `node-${Date.now()}-${this.nodeIdCounter}`,
-          bomId: null
+          bomId: null,
+          bomLabel: ''
         }
       }
     },
@@ -724,7 +785,13 @@ export default {
       const isRoot = node.id === 'root'
       const itemList = isRoot
         ? ['串行新增']
-        : ['选择工序', '串行新增', this.isConnecting ? '取消连线模式' : '从当前节点开始连线', '删除节点']
+        : [
+            '选择工序',
+            '绑定BOM',
+            '串行新增',
+            this.isConnecting ? '取消连线模式' : '从当前节点开始连线',
+            '删除节点'
+          ]
       uni.showActionSheet({
         itemList,
         success: ({ tapIndex }) => {
@@ -733,15 +800,16 @@ export default {
             return
           }
           if (tapIndex === 0) this.onSelectCurrentNodeProcess()
-          if (tapIndex === 1) this.onAddSerialNode()
-          if (tapIndex === 2) {
+          if (tapIndex === 1) this.onOpenBindBom()
+          if (tapIndex === 2) this.onAddSerialNode()
+          if (tapIndex === 3) {
             if (this.isConnecting) {
               this.cancelConnectMode()
             } else {
               this.startConnectMode(node.id)
             }
           }
-          if (tapIndex === 3) this.onDeleteCurrentNode()
+          if (tapIndex === 4) this.onDeleteCurrentNode()
         }
       })
     },
@@ -826,7 +894,9 @@ export default {
           data: {
             ...node.data,
             processId: this.selectedProcessId,
-            processCode: this.selectedProcess.code
+            processCode: this.selectedProcess.code,
+            bomId: node.data?.bomId ?? null,
+            bomLabel: node.data?.bomLabel ?? ''
           }
         }
       })
@@ -902,6 +972,140 @@ export default {
         return
       }
       this.onSelectProcess(currentNode)
+    },
+
+    /**
+     * 加载 BOM 列表（限定当前工艺路线关联物料）
+     * @param {Object} params - 分页与搜索参数
+     * @returns {Promise<Object>}
+     */
+    fetchBomListForRoute(params = {}) {
+      const mid = this.routeInfo.material
+      if (!mid) {
+        return Promise.resolve({
+          code: 400,
+          msg: '缺少工艺路线物料',
+          data: [],
+          total: 0
+        })
+      }
+      return bomApi.getBomList({
+        ...params,
+        material: mid
+      })
+    },
+
+    /**
+     * 打开绑定 BOM 弹窗
+     */
+    onOpenBindBom() {
+      const currentNode = this.graphData.nodes.find((n) => n.id === this.selectedNodeId)
+      if (!currentNode || currentNode.id === 'root') {
+        uni.showToast({ title: '请先选择工序节点', icon: 'none' })
+        return
+      }
+      if (!this.routeInfo.material) {
+        uni.showToast({ title: '路线物料信息缺失，无法筛选 BOM', icon: 'none' })
+        return
+      }
+      this.editingNode = currentNode
+      const bid = currentNode.data?.bomId
+      this.selectedBomId = bid != null && bid !== '' ? bid : ''
+      this.selectedBom = null
+      this.showBomSelector = true
+    },
+
+    /**
+     * BOM 选择器选中回调
+     * @param {Object|null} bom - BOM 行数据
+     */
+    onBomSelect(bom) {
+      this.selectedBom = bom || null
+      if (bom && bom.id != null) {
+        this.selectedBomId = bom.id
+      }
+    },
+
+    /**
+     * 由 BOM 记录生成节点展示文案
+     * @param {Object} bom - BOM 对象
+     * @returns {string}
+     */
+    formatBomLabelFromRecord(bom) {
+      if (!bom) {
+        return ''
+      }
+      const v = bom.version || ''
+      const name = bom.material_name || ''
+      if (v && name) {
+        return `${v} ${name}`
+      }
+      return v || name || ''
+    },
+
+    /**
+     * 确认绑定所选 BOM
+     */
+    onConfirmSelectBom() {
+      if (!this.editingNode) {
+        this.showBomSelector = false
+        return
+      }
+      if (!this.selectedBomId || !this.selectedBom) {
+        uni.showToast({ title: '请选择一个 BOM', icon: 'none' })
+        return
+      }
+      const targetId = this.editingNode.id
+      const label = this.formatBomLabelFromRecord(this.selectedBom)
+      this.graphData.nodes = this.graphData.nodes.map((node) => {
+        if (node.id !== targetId) {
+          return node
+        }
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            bomId: this.selectedBom.id,
+            bomLabel: label
+          }
+        }
+      })
+      this.refreshGraph()
+      this.showBomSelector = false
+      this.selectedBomId = ''
+      this.selectedBom = null
+      this.editingNode = null
+      uni.showToast({ title: '已绑定 BOM', icon: 'success' })
+    },
+
+    /**
+     * 清除当前节点 BOM 绑定
+     */
+    onClearBomBinding() {
+      if (!this.editingNode) {
+        this.showBomSelector = false
+        return
+      }
+      const targetId = this.editingNode.id
+      this.graphData.nodes = this.graphData.nodes.map((node) => {
+        if (node.id !== targetId) {
+          return node
+        }
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            bomId: null,
+            bomLabel: ''
+          }
+        }
+      })
+      this.refreshGraph()
+      this.showBomSelector = false
+      this.selectedBomId = ''
+      this.selectedBom = null
+      this.editingNode = null
+      uni.showToast({ title: '已清除 BOM 绑定', icon: 'success' })
     },
     /**
      * 将 scroll-view 水平与垂直滚动复位，避免部分端初始停在非 0 偏移导致图看起来偏到一侧
@@ -1100,7 +1304,10 @@ export default {
         .map(node => ({
           node_key: node.data.nodeKey || node.id,
           process: node.data.processId,
-          process_bom: node.data.bomId || null
+          process_bom:
+            node.data.bomId != null && node.data.bomId !== ''
+              ? Number(node.data.bomId)
+              : null
         }))
       const incomingSet = new Set(
         this.graphData.lines
@@ -1289,6 +1496,32 @@ export default {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.rg-node-bom {
+  font-size: 18rpx;
+  color: #646566;
+  text-align: center;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bom-popup-tip {
+  display: block;
+  padding: 0 24rpx 16rpx;
+  font-size: 24rpx;
+  color: $uni-text-color-grey;
+  line-height: 1.5;
+}
+
+.bom-popup-actions {
+  display: flex;
+  flex-direction: row;
+  gap: 24rpx;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .gesture-tip {

@@ -72,7 +72,7 @@
 </template>
 
 <script>
-import processApi from '@/api/process.js'
+import processApi from '@/api/process'
 
 /**
  * 工序管理页面（管理员专属）

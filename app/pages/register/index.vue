@@ -65,7 +65,7 @@
 </template>
 
 <script>
-import authApi from '@/api/auth.js'
+import authApi from '@/api/auth'
 
 /**
  * 注册页面

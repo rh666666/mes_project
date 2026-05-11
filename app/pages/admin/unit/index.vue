@@ -61,7 +61,7 @@
 </template>
 
 <script>
-import unitApi from '@/api/unit.js'
+import unitApi from '@/api/unit'
 
 /**
  * 单位管理页面（管理员专属）

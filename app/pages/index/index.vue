@@ -69,7 +69,17 @@ export default {
         { text: '物料管理', key: 'materialManagement', url: '/pages/admin/material/index' },
         { text: '工序管理', key: 'processManagement', url: '/pages/admin/process/index' },
         { text: '工艺路线管理', key: 'processRouteManagement', url: '/pages/admin/process-route/index' },
-        { text: 'BOM 管理', key: 'bomManagement', url: '/pages/admin/bom/index' }
+        { text: 'BOM 管理', key: 'bomManagement', url: '/pages/admin/bom/index' },
+        {
+          text: '生产任务单管理',
+          key: 'productionOrderManagement',
+          url: '/pages/admin/work-order/production-order/index'
+        },
+        {
+          text: '工序派工单管理',
+          key: 'dispatchOrderManagement',
+          url: '/pages/admin/work-order/dispatch-order/index'
+        }
       ]
     },
 
@@ -96,6 +106,13 @@ export default {
           title: '工艺流程',
           items: this.adminMenuItems.filter((item) =>
             ['processManagement', 'processRouteManagement', 'bomManagement'].includes(item.key)
+          )
+        },
+        {
+          key: 'workOrder',
+          title: '工单管理',
+          items: this.adminMenuItems.filter((item) =>
+            ['productionOrderManagement', 'dispatchOrderManagement'].includes(item.key)
           )
         }
       ]

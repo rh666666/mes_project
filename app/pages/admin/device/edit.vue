@@ -48,7 +48,7 @@
 </template>
 
 <script>
-import deviceApi, { DeviceStatus, DeviceStatusLabel } from '@/api/device.js'
+import deviceApi, { DeviceStatus, DeviceStatusLabel } from '@/api/device'
 
 /**
  * 设备编辑/创建页面
