@@ -38,7 +38,60 @@
       <view v-else class="empty-hint">
         <text class="hint-text">暂无原材料需求数据（首道工序未配置 BOM 时为空）</text>
       </view>
+    </view>
 
+    <view v-else-if="!loadError" class="loading-wrap">
+      <wd-loading />
+    </view>
+    <wd-status-tip v-else image="search" :tip="loadError" />
+
+    <wd-popup
+      v-model="showOperationDrawer"
+      position="right"
+      :modal="true"
+      :safe-area-inset-bottom="true"
+      :root-portal="true"
+      custom-class="operation-drawer-popup"
+      custom-style="width: 520rpx; height: 100%; max-width: 85vw; box-sizing: border-box;"
+      @close="onOperationDrawerClose"
+    >
+      <view class="operation-drawer">
+        <view class="operation-drawer-header">
+          <text class="operation-drawer-title">操作</text>
+          <wd-icon name="close" size="20" @click="closeOperationDrawer" />
+        </view>
+        <wd-cell-group border class="operation-drawer-body">
+          <wd-cell v-if="order" title="查看工序派工单" is-link @click="onDrawerDispatchList" />
+          <wd-cell
+            v-if="order && order.status === 'pending'"
+            title="下发"
+            is-link
+            @click="onDrawerPublish"
+          />
+          <wd-cell
+            v-if="order && order.status === 'pending'"
+            title="编辑"
+            is-link
+            @click="onDrawerEdit"
+          />
+          <wd-cell
+            v-if="order && order.status === 'pending'"
+            title="删除"
+            is-link
+            @click="onDrawerDelete"
+          />
+          <wd-cell
+            v-if="order && order.status === 'published'"
+            title="取消任务单"
+            is-link
+            @click="onDrawerCancel"
+          />
+        </wd-cell-group>
+      </view>
+    </wd-popup>
+
+    <!-- #ifndef APP-PLUS -->
+    <view v-if="order" class="content content--footer-actions">
       <view class="section-header section-mt">
         <text class="section-title">操作</text>
       </view>
@@ -52,14 +105,7 @@
         >
           下发
         </wd-button>
-        <wd-button
-          v-if="order.status === 'pending'"
-          plain
-          block
-          @click="onGoEdit"
-        >
-          编辑
-        </wd-button>
+        <wd-button v-if="order.status === 'pending'" plain block @click="onGoEdit">编辑</wd-button>
         <wd-button
           v-if="order.status === 'pending'"
           type="error"
@@ -83,11 +129,7 @@
         <wd-button plain block :loading="reloadLoading" @click="reload">刷新</wd-button>
       </view>
     </view>
-
-    <view v-else-if="!loadError" class="loading-wrap">
-      <wd-loading />
-    </view>
-    <wd-status-tip v-else image="search" :tip="loadError" />
+    <!-- #endif -->
   </view>
 </template>
 
@@ -98,7 +140,7 @@ import { getStorageKey } from '@/config/index.js'
 
 /**
  * 生产任务单详情（管理员）
- * @description 展示详情、原材料与派工进度；未下发可编辑/下发/删除，已下发可取消
+ * @description 展示详情、原材料与派工进度；App 端操作与工序派工单详情一致（导航栏更多 + 刷新、右侧抽屉）；非 App 保留底部操作区
  */
 export default {
   data() {
@@ -114,7 +156,9 @@ export default {
       /** @type {boolean} 刷新中 */
       reloadLoading: false,
       /** @type {string} 进行中的操作类型 */
-      actionLoading: ''
+      actionLoading: '',
+      /** @type {boolean} 右侧操作抽屉 */
+      showOperationDrawer: false
     }
   },
 
@@ -152,6 +196,20 @@ export default {
     this.loadAll()
   },
 
+  /**
+   * App 原生导航栏右侧按钮：index 0 打开操作抽屉，index 1 刷新详情（与工序派工单详情一致）
+   * @param {Object} e - 事件对象
+   */
+  onNavigationBarButtonTap(e) {
+    if (e.index === 0) {
+      this.openOperationDrawer()
+      return
+    }
+    if (e.index === 1) {
+      this.reload()
+    }
+  },
+
   methods: {
     /**
      * 校验管理员角色
@@ -167,6 +225,81 @@ export default {
         return false
       }
       return true
+    },
+
+    /**
+     * 打开右侧操作抽屉（与导航栏纵向三点一致；使用 wd-popup position=right）
+     */
+    openOperationDrawer() {
+      if (!this.orderId) {
+        uni.showToast({ title: '页面未就绪', icon: 'none' })
+        return
+      }
+      this.showOperationDrawer = true
+    },
+
+    /**
+     * 关闭操作抽屉
+     */
+    closeOperationDrawer() {
+      this.showOperationDrawer = false
+    },
+
+    /**
+     * 抽屉关闭回调（含点击遮罩）
+     */
+    onOperationDrawerClose() {
+      this.showOperationDrawer = false
+    },
+
+    /**
+     * 抽屉内：下发
+     */
+    onDrawerPublish() {
+      this.closeOperationDrawer()
+      this.$nextTick(() => {
+        this.onPublish()
+      })
+    },
+
+    /**
+     * 抽屉内：编辑
+     */
+    onDrawerEdit() {
+      this.closeOperationDrawer()
+      this.$nextTick(() => {
+        this.onGoEdit()
+      })
+    },
+
+    /**
+     * 抽屉内：删除
+     */
+    onDrawerDelete() {
+      this.closeOperationDrawer()
+      this.$nextTick(() => {
+        this.onDelete()
+      })
+    },
+
+    /**
+     * 抽屉内：取消任务单
+     */
+    onDrawerCancel() {
+      this.closeOperationDrawer()
+      this.$nextTick(() => {
+        this.onCancel()
+      })
+    },
+
+    /**
+     * 抽屉内：查看工序派工单
+     */
+    onDrawerDispatchList() {
+      this.closeOperationDrawer()
+      this.$nextTick(() => {
+        this.onGoDispatchList()
+      })
     },
 
     /**
@@ -346,7 +479,6 @@ export default {
 .page {
   min-height: 100vh;
   background-color: $uni-bg-color;
-  padding-bottom: calc(48rpx + env(safe-area-inset-bottom));
 }
 
 .content {
@@ -390,4 +522,36 @@ export default {
   font-size: 26rpx;
   color: $uni-text-color-grey;
 }
+
+.operation-drawer {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  background-color: $uni-bg-color-white;
+}
+
+.operation-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28rpx 24rpx;
+  border-bottom: 1px solid $uni-border-color;
+}
+
+.operation-drawer-title {
+  font-size: 32rpx;
+  font-weight: 500;
+  color: $uni-text-color;
+}
+
+.operation-drawer-body {
+  flex: 1;
+}
+
+/* #ifndef APP-PLUS */
+.content--footer-actions {
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+}
+
+/* #endif */
 </style>

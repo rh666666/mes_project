@@ -183,7 +183,23 @@
 		{
 			"path": "pages/admin/work-order/production-order/detail",
 			"style": {
-				"navigationBarTitleText": "任务单详情"
+				"navigationBarTitleText": "任务单详情",
+				"app-plus": {
+					"titleNView": {
+						"buttons": [
+							{
+								"text": "\u22EE",
+								"fontSize": "22px",
+								"width": "44px"
+							},
+							{
+								"text": "\u27F3",
+								"fontSize": "22px",
+								"width": "44px"
+							}
+						]
+					}
+				}
 			}
 		},
 		{
