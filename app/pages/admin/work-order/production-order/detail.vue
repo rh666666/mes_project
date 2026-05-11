@@ -17,10 +17,7 @@
         <text class="section-title">派工进度</text>
       </view>
       <wd-cell-group>
-        <wd-cell
-          title="完成情况"
-          :value="`${order.completed_dispatch_count ?? 0} / ${order.dispatch_order_count ?? 0}`"
-        />
+        <wd-cell title="完成情况" :value="completedDispatchSummary" />
       </wd-cell-group>
 
       <view class="section-header section-mt">
@@ -46,11 +43,12 @@
     <wd-status-tip v-else image="search" :tip="loadError" />
 
     <wd-popup
+      v-if="order"
       v-model="showOperationDrawer"
       position="right"
       :modal="true"
       :safe-area-inset-bottom="true"
-      :root-portal="true"
+      :root-portal="false"
       custom-class="operation-drawer-popup"
       custom-style="width: 520rpx; height: 100%; max-width: 85vw; box-sizing: border-box;"
       @close="onOperationDrawerClose"
@@ -163,6 +161,21 @@ export default {
   },
 
   computed: {
+    /**
+     * 派工完成情况展示文案（模板内不使用 ??，以兼容 App 端运行时）
+     * @returns {string}
+     */
+    completedDispatchSummary() {
+      if (!this.order) {
+        return '0 / 0'
+      }
+      const done =
+        this.order.completed_dispatch_count != null ? Number(this.order.completed_dispatch_count) : 0
+      const total =
+        this.order.dispatch_order_count != null ? Number(this.order.dispatch_order_count) : 0
+      return `${done} / ${total}`
+    },
+
     /**
      * 原材料需求表格行
      * @returns {Array<{key:string,name:string,code:string,qty:number}>}

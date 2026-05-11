@@ -17,8 +17,8 @@
         <wd-cell title="设备编码" :value="deviceSummary" />
         <wd-cell title="父工单" :value="parentSummary" />
         <wd-cell title="子工单数" :value="order.children_count != null ? String(order.children_count) : '-'" />
-        <wd-cell title="创建时间" :value="order.create_datetime || '-'" />
-        <wd-cell title="更新时间" :value="order.update_datetime || '-'" />
+        <wd-cell title="创建时间" :value="formatDateTime(order.create_datetime)" />
+        <wd-cell title="更新时间" :value="formatDateTime(order.update_datetime)" />
       </wd-cell-group>
 
       <view v-if="dispatchHint" class="hint-box section-mt">
@@ -32,11 +32,12 @@
     <wd-status-tip v-else image="search" :tip="loadError" />
 
     <wd-popup
+      v-if="order"
       v-model="showOperationDrawer"
       position="right"
       :modal="true"
       :safe-area-inset-bottom="true"
-      :root-portal="true"
+      :root-portal="false"
       custom-class="operation-drawer-popup"
       custom-style="width: 520rpx; height: 100%; max-width: 85vw; box-sizing: border-box;"
       @close="onOperationDrawerClose"
@@ -141,10 +142,11 @@ import dispatchOrderApi from '@/api/dispatch-order'
 import SearchableSelector from '@/components/ui/SearchableSelector/SearchableSelector.vue'
 import { getStorageKey } from '@/config/index.js'
 import { clampApiListLimit } from '@/utils/common.js'
+import { formatDateTime } from '@/utils/format.js'
 
 /**
  * 工序派工单详情（管理员）
- * @description 展示详情；待抢单时可派工；满足数量规则时可拆分
+ * @description 展示详情；待抢单时可派工；满足数量规则时可拆分。右侧操作抽屉在 order 就绪后挂载且不使用 root-portal，避免 uni-app 视图层 insertBefore 类报错与白屏。
  */
 export default {
   components: {
@@ -302,6 +304,8 @@ export default {
   },
 
   methods: {
+    formatDateTime,
+
     /**
      * 打开右侧操作抽屉（与导航栏三点按钮一致；wot 无独立 Drawer，使用 wd-popup position=right）
      */

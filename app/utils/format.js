@@ -29,6 +29,32 @@ export function formatDate(date, format = 'YYYY-MM-DD') {
     .replace('ss', seconds)
 }
 
+/** 列表/详情中接口日期时间字段的默认展示格式：年-月-日 时:分:秒（24 小时制，本地时区） */
+export const DATETIME_DISPLAY_FORMAT = 'YYYY-MM-DD HH:mm:ss'
+
+/**
+ * 将接口返回的日期时间格式化为 {@link DATETIME_DISPLAY_FORMAT}（等价于 `YYYY-MM-DD HH:mm:ss`）
+ * @param {string|number|Date|null|undefined} value - ISO 字符串、时间戳或 Date；空值返回占位符
+ * @param {string} [emptyPlaceholder='-'] - 无值或非法日期时的展示文案
+ * @returns {string}
+ */
+export function formatDateTime(value, emptyPlaceholder = '-') {
+  if (value === null || value === undefined || value === '') {
+    return emptyPlaceholder
+  }
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) {
+    return emptyPlaceholder
+  }
+  const y = d.getFullYear()
+  const mo = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  const h = String(d.getHours()).padStart(2, '0')
+  const mi = String(d.getMinutes()).padStart(2, '0')
+  const s = String(d.getSeconds()).padStart(2, '0')
+  return `${y}-${mo}-${day} ${h}:${mi}:${s}`
+}
+
 /**
  * 获取完整头像URL
  * @param {string} avatar - 头像路径
