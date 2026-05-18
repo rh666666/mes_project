@@ -33,6 +33,15 @@ class ProcessSkillRequired(CoreModel):
     class Meta:
         verbose_name = "工序技能需求"
         verbose_name_plural = "工序技能需求"
+        indexes = [
+            models.Index(fields=["process"], name="mes_psr_process_idx"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["process", "skill"],
+                name="mes_psr_process_skill_uniq",
+            ),
+        ]
 
 
 class ProcessRoute(CoreModel):

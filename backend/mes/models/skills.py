@@ -36,6 +36,15 @@ class UserSkill(CoreModel):
     class Meta:
         verbose_name = "用户技能"
         verbose_name_plural = "用户技能"
+        indexes = [
+            models.Index(fields=["user"], name="mes_us_user_idx"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "skill"],
+                name="mes_us_user_skill_uniq",
+            ),
+        ]
 
 
 class DeviceSkill(CoreModel):

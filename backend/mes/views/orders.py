@@ -8,6 +8,7 @@ from __future__ import annotations
 import logging
 
 from django.db import transaction
+from django.db.models import Q
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -37,6 +38,12 @@ from mes.serializers.orders import (
     QualityCheckOrderListResponseSerializer,
     QualityCheckOrderSerializer,
     QualityCheckOrderSubmitResultRequestSerializer,
+)
+from mes.services.dispatch_skill import (
+    SKILL_MISMATCH_MSG,
+    SKILL_MISMATCH_VIEW_MSG,
+    filter_queryset_by_user_skills,
+    user_meets_process_skills,
 )
 from utils import DetailResponse, ErrorResponse, SuccessResponse
 
@@ -424,13 +431,42 @@ class DispatchOrderViewSet(viewsets.ViewSet):
     """
 
     def get_permissions(self):
-        if self.action in ["grab", "start", "pause", "report"]:
+        if self.action in ["grab", "start", "pause", "report", "list", "retrieve"]:
             return [IsAuthenticated()]
         return [IsAdmin()]
 
+    def _is_admin_user(self, request: Request) -> bool:
+        """判断当前请求用户是否为管理员
+
+        Args:
+            request: HTTP 请求
+
+        Returns:
+            bool: 是否为管理员
+        """
+        return IsAdmin().has_permission(request, self)
+
+    def _dispatch_order_queryset_with_relations(self):
+        """返回带关联预加载的派工单 QuerySet。
+
+        Returns:
+            QuerySet: 派工单 QuerySet
+        """
+        return DispatchOrder.objects.select_related(
+            "production_order",
+            "process",
+            "operator",
+            "device",
+            "parent",
+        )
+
     @extend_schema(
         summary="获取工序派工单列表",
-        description="获取工序派工单列表，支持分页和按生产任务单、工序、状态过滤",
+        description=(
+            "获取工序派工单列表，支持分页和按生产任务单、工序、状态过滤。"
+            "非管理员查询待抢单（pending）时，仅返回其技能满足工序要求的工单"
+            "（工序未配置技能则无门槛）；其他状态仅返回本人接单的工单。"
+        ),
         parameters=[DispatchOrderListRequestSerializer],
         responses={
             200: OpenApiResponse(response=DispatchOrderListResponseSerializer, description="获取成功"),
@@ -458,7 +494,7 @@ class DispatchOrderViewSet(viewsets.ViewSet):
         process_filter = serializer.validated_data.get("process")
         status_filter = serializer.validated_data.get("status")
 
-        queryset = DispatchOrder.objects.all().order_by("-create_datetime")
+        queryset = self._dispatch_order_queryset_with_relations().order_by("-create_datetime")
 
         if production_order_filter:
             queryset = queryset.filter(production_order_id=production_order_filter)
@@ -466,6 +502,13 @@ class DispatchOrderViewSet(viewsets.ViewSet):
             queryset = queryset.filter(process_id=process_filter)
         if status_filter:
             queryset = queryset.filter(status=status_filter)
+
+        if not self._is_admin_user(request):
+            if status_filter == DispatchOrder.Status.PENDING:
+                queryset = queryset.filter(status=DispatchOrder.Status.PENDING, is_parent=False)
+                queryset = filter_queryset_by_user_skills(queryset, request.user.id)
+            else:
+                queryset = queryset.filter(operator_id=request.user.id)
 
         total = queryset.count()
         start = (page - 1) * limit
@@ -476,7 +519,10 @@ class DispatchOrderViewSet(viewsets.ViewSet):
 
     @extend_schema(
         summary="获取工序派工单详情",
-        description="根据工序派工单ID获取详细信息",
+        description=(
+            "根据工序派工单ID获取详细信息。"
+            "非管理员查看待抢单时须满足工序技能要求（与抢单列表规则一致）。"
+        ),
         responses={
             200: OpenApiResponse(response=DispatchOrderDetailResponseSerializer, description="获取成功"),
             403: OpenApiResponse(response=ErrorResponse, description="无权限"),
@@ -495,9 +541,18 @@ class DispatchOrderViewSet(viewsets.ViewSet):
             Response: 工序派工单详细信息
         """
         try:
-            order = DispatchOrder.objects.get(id=pk)
+            order = self._dispatch_order_queryset_with_relations().get(id=pk)
         except DispatchOrder.DoesNotExist:
             return ErrorResponse(msg="工序派工单不存在", status=status.HTTP_404_NOT_FOUND)
+
+        if not self._is_admin_user(request):
+            if order.status == DispatchOrder.Status.PENDING:
+                if order.is_parent:
+                    return ErrorResponse(msg="无权限查看该派工单", status=status.HTTP_403_FORBIDDEN)
+                if not user_meets_process_skills(request.user.id, order.process_id):
+                    return ErrorResponse(msg=SKILL_MISMATCH_VIEW_MSG, status=status.HTTP_403_FORBIDDEN)
+            elif order.operator_id != request.user.id:
+                return ErrorResponse(msg="无权限查看该派工单", status=status.HTTP_403_FORBIDDEN)
 
         return DetailResponse(data=DispatchOrderSerializer(order).data)
 
@@ -562,7 +617,10 @@ class DispatchOrderViewSet(viewsets.ViewSet):
 
     @extend_schema(
         summary="抢单（员工）",
-        description="员工手动抢单",
+        description=(
+            "员工手动抢单。须为待抢单、非父工单、前置工序已产出，"
+            "且拥有该工序要求的全部技能（工序未配置技能则无门槛）。"
+        ),
         responses={
             200: OpenApiResponse(response=DetailResponse, description="抢单成功"),
             400: OpenApiResponse(response=ErrorResponse, description="派工单状态不正确或不可抢单"),
@@ -598,6 +656,9 @@ class DispatchOrderViewSet(viewsets.ViewSet):
         # 检查是否是父工单（父工单不可接取）
         if order.is_parent:
             return ErrorResponse(msg="父工单不可接取，请接取子工单", status=status.HTTP_400_BAD_REQUEST)
+
+        if not user_meets_process_skills(request.user.id, order.process_id):
+            return ErrorResponse(msg=SKILL_MISMATCH_MSG, status=status.HTTP_400_BAD_REQUEST)
 
         order.operator = request.user
         order.status = DispatchOrder.Status.GRABBED
@@ -799,13 +860,68 @@ class ProductionReportViewSet(viewsets.ViewSet):
     """生产报工视图集
 
     处理生产报工的查询和创建操作。
+    非管理员仅可查看本人提交的报工记录（按创建人或关联派工单接单人判定）。
     """
 
     permission_classes = [IsAuthenticated]
 
+    def _is_admin_user(self, request: Request) -> bool:
+        """判断当前请求用户是否为管理员。
+
+        Args:
+            request: HTTP 请求
+
+        Returns:
+            bool: 是否为管理员
+        """
+        return IsAdmin().has_permission(request, self)
+
+    def _production_report_queryset(self):
+        """返回带关联预加载的生产报工 QuerySet。
+
+        Returns:
+            QuerySet: 生产报工 QuerySet
+        """
+        return ProductionReport.objects.select_related(
+            "dispatch_order",
+            "dispatch_order__process",
+        )
+
+    def _employee_can_view_report(self, report: ProductionReport, user_id: int) -> bool:
+        """判断员工是否可查看该报工记录。
+
+        Args:
+            report: 报工记录
+            user_id: 用户 ID
+
+        Returns:
+            bool: 是否可查看
+        """
+        if report.creator_id == user_id:
+            return True
+        dispatch_order = report.dispatch_order
+        return bool(dispatch_order is not None and dispatch_order.operator_id == user_id)
+
+    def _filter_queryset_for_employee(self, queryset, user_id: int):
+        """将 QuerySet 限制为当前员工本人的报工记录。
+
+        Args:
+            queryset: 生产报工 QuerySet
+            user_id: 用户 ID
+
+        Returns:
+            QuerySet: 过滤后的 QuerySet
+        """
+        return queryset.filter(
+            Q(creator_id=user_id) | Q(dispatch_order__operator_id=user_id),
+        ).distinct()
+
     @extend_schema(
         summary="获取生产报工列表",
-        description="获取生产报工列表，支持分页和按工序派工单过滤",
+        description=(
+            "获取生产报工列表，支持分页和按工序派工单过滤。"
+            "非管理员仅返回本人报工记录（创建人或关联派工单接单人）。"
+        ),
         parameters=[ProductionReportListRequestSerializer],
         responses={
             200: OpenApiResponse(response=ProductionReportListResponseSerializer, description="获取成功"),
@@ -831,10 +947,13 @@ class ProductionReportViewSet(viewsets.ViewSet):
         limit = serializer.validated_data.get("limit", 10)
         dispatch_order_filter = serializer.validated_data.get("dispatch_order")
 
-        queryset = ProductionReport.objects.all().order_by("-create_datetime")
+        queryset = self._production_report_queryset().order_by("-create_datetime")
 
         if dispatch_order_filter:
             queryset = queryset.filter(dispatch_order_id=dispatch_order_filter)
+
+        if not self._is_admin_user(request):
+            queryset = self._filter_queryset_for_employee(queryset, request.user.id)
 
         total = queryset.count()
         start = (page - 1) * limit
@@ -845,7 +964,10 @@ class ProductionReportViewSet(viewsets.ViewSet):
 
     @extend_schema(
         summary="获取生产报工详情",
-        description="根据生产报工ID获取详细信息",
+        description=(
+            "根据生产报工 ID 获取详细信息。"
+            "非管理员仅可查看本人报工记录。"
+        ),
         responses={
             200: OpenApiResponse(response=DetailResponse, description="获取成功"),
             403: OpenApiResponse(response=ErrorResponse, description="无权限"),
@@ -864,9 +986,12 @@ class ProductionReportViewSet(viewsets.ViewSet):
             Response: 生产报工详细信息
         """
         try:
-            report = ProductionReport.objects.get(id=pk)
+            report = self._production_report_queryset().get(id=pk)
         except ProductionReport.DoesNotExist:
             return ErrorResponse(msg="生产报工不存在", status=status.HTTP_404_NOT_FOUND)
+
+        if not self._is_admin_user(request) and not self._employee_can_view_report(report, request.user.id):
+            return ErrorResponse(msg="无权限查看该报工记录", status=status.HTTP_403_FORBIDDEN)
 
         return DetailResponse(data=ProductionReportSerializer(report).data)
 
