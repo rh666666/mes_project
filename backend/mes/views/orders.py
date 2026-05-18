@@ -464,8 +464,9 @@ class DispatchOrderViewSet(viewsets.ViewSet):
         summary="获取工序派工单列表",
         description=(
             "获取工序派工单列表，支持分页和按生产任务单、工序、状态过滤。"
-            "非管理员查询待抢单（pending）时，仅返回其技能满足工序要求的工单"
-            "（工序未配置技能则无门槛）；其他状态仅返回本人接单的工单。"
+            "mine=true 时仅返回当前用户接单的工单（管理员亦生效）。"
+            "非管理员且未指定 mine 时：查询待抢单（pending）按技能过滤；"
+            "其他状态仅返回本人接单的工单。管理员未指定 mine 时可查看全部。"
         ),
         parameters=[DispatchOrderListRequestSerializer],
         responses={
@@ -493,6 +494,7 @@ class DispatchOrderViewSet(viewsets.ViewSet):
         production_order_filter = serializer.validated_data.get("production_order")
         process_filter = serializer.validated_data.get("process")
         status_filter = serializer.validated_data.get("status")
+        mine_only = serializer.validated_data.get("mine", False)
 
         queryset = self._dispatch_order_queryset_with_relations().order_by("-create_datetime")
 
@@ -503,7 +505,9 @@ class DispatchOrderViewSet(viewsets.ViewSet):
         if status_filter:
             queryset = queryset.filter(status=status_filter)
 
-        if not self._is_admin_user(request):
+        if mine_only:
+            queryset = queryset.filter(operator_id=request.user.id)
+        elif not self._is_admin_user(request):
             if status_filter == DispatchOrder.Status.PENDING:
                 queryset = queryset.filter(status=DispatchOrder.Status.PENDING, is_parent=False)
                 queryset = filter_queryset_by_user_skills(queryset, request.user.id)
@@ -845,9 +849,7 @@ class DispatchOrderViewSet(viewsets.ViewSet):
         work_time = serializer.validated_data["work_time"]
 
         try:
-            report = order.report(report_quantity)
-            report.work_time = work_time
-            report.save()
+            report = order.report(report_quantity, work_time=work_time)
             return DetailResponse(data=ProductionReportSerializer(report).data, msg="报工成功")
         except ValueError as e:
             return ErrorResponse(msg=str(e), status=status.HTTP_400_BAD_REQUEST)

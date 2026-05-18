@@ -56,7 +56,7 @@
         >
           生产报工
         </wd-button>
-        <wd-button plain size="large" block :loading="reportNavLoading" @click="onGoReportDetail">
+        <wd-button plain size="large" block :loading="reportNavLoading" @click="onViewReports">
           查看报工记录
         </wd-button>
       </view>
@@ -328,10 +328,10 @@ export default {
     },
 
     /**
-     * 跳转该派工单最新一条报工记录详情
+     * 查看报工记录：0 条提示；1 条进详情；多条进列表
      * @returns {Promise<void>}
      */
-    async onGoReportDetail() {
+    async onViewReports() {
       if (this.orderId == null || this.reportNavLoading) {
         return
       }
@@ -343,14 +343,29 @@ export default {
           page: 1,
           limit: clampApiListLimit(1)
         })
-        const latest = res.code === 2000 && res.data && res.data.length > 0 ? res.data[0] : null
-        if (latest && latest.id != null) {
+        if (res.code !== 2000) {
+          uni.showToast({ title: res.msg || '获取报工记录失败', icon: 'none' })
+          return
+        }
+
+        const total = res.total != null ? res.total : 0
+        const list = res.data || []
+
+        if (total === 0 || list.length === 0) {
+          uni.showToast({ title: '无报工记录', icon: 'none' })
+          return
+        }
+
+        if (total === 1 && list[0] && list[0].id != null) {
           uni.navigateTo({
-            url: `/pages/work-order/report-detail/index?id=${latest.id}`
+            url: `/pages/work-order/report-detail/index?id=${list[0].id}`
           })
           return
         }
-        uni.showToast({ title: res.msg || '暂无报工记录', icon: 'none' })
+
+        uni.navigateTo({
+          url: `/pages/work-order/report-list/index?dispatch_order=${this.orderId}`
+        })
       } catch (error) {
         console.error('获取报工记录失败:', error)
         uni.showToast({ title: error.msg || '获取报工记录失败', icon: 'none' })

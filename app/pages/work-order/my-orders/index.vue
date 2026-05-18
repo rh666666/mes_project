@@ -157,7 +157,8 @@ export default {
       try {
         const params = {
           page: this.currentPage,
-          limit: clampApiListLimit(this.pageSize)
+          limit: clampApiListLimit(this.pageSize),
+          mine: true
         }
         if (this.filterStatus !== '') {
           params.status = this.filterStatus

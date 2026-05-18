@@ -237,26 +237,34 @@ class DispatchOrder(CoreModel):
             
             return child_order
 
-    def report(self, report_quantity: int) -> 'ProductionReport':
+    def report(
+        self,
+        report_quantity: int,
+        work_time: datetime.timedelta | None = None,
+    ) -> 'ProductionReport':
         """生产报工
 
         Args:
             report_quantity: 报工数量
-            
+            work_time: 工作时间，缺省为 0
+
         Returns:
             ProductionReport: 创建的报工记录
         """
+        if work_time is None:
+            work_time = datetime.timedelta(0)
+
         with transaction.atomic():
             # 验证报工数量
             remaining = self.quantity - self.completed_quantity
             if report_quantity > remaining:
                 raise ValueError("报工数量不能超过剩余生产数量")
-            
-            # 创建报工记录
+
+            # 创建报工记录（编号在 ProductionReport.save 中自动生成）
             report = ProductionReport.objects.create(
                 dispatch_order=self,
                 quantity=report_quantity,
-                work_time=datetime.timedelta(hours=0)  # 暂时设为0，实际应从前端获取
+                work_time=work_time,
             )
             
             # 更新已完成数量
@@ -323,6 +331,36 @@ class ProductionReport(CoreModel):
     quantity = models.PositiveIntegerField(verbose_name="报工数量")
     work_time = models.DurationField(verbose_name="工作时间")
     report_date = models.DateField(verbose_name="报工日期", auto_now_add=True)
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        """保存生产报工，自动生成编号.
+
+        编号格式：PR-8位日期-4位序列号
+        示例：PR-20250518-0001
+
+        Args:
+            *args: 位置参数
+            **kwargs: 关键字参数
+        """
+        from django.db import IntegrityError
+
+        if self.code:
+            super().save(*args, **kwargs)
+            return
+
+        max_retries = 5
+        for attempt in range(max_retries):
+            self.code = generate_date_sequence_code(
+                model_class=ProductionReport,
+                prefix="PR",
+            )
+            try:
+                super().save(*args, **kwargs)
+                return
+            except IntegrityError:
+                self.code = ""
+                if attempt >= max_retries - 1:
+                    raise
 
 
 class QualityCheckOrder(CoreModel):

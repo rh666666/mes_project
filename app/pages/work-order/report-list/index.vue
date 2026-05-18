@@ -18,23 +18,43 @@
       @scrolltolower="onLoadMore"
       @scroll="onScroll"
     >
-      <wd-cell-group>
-        <wd-cell
+      <view class="report-cards">
+        <view
           v-for="item in reportList"
           :key="item.id"
-          :title="item.code || `报工 ${item.id}`"
-          :label="cellLabel(item)"
-          clickable
+          class="report-card"
           @click="onRowClick(item)"
         >
-          <template #value>
-            <view class="cell-right">
-              <text class="qty-text">{{ item.quantity != null ? item.quantity : '-' }}</text>
-              <wd-icon name="arrow-right" size="16" color="#969799" />
+          <view class="report-card__header">
+            <text class="report-card__code">{{ item.code || `报工 ${item.id}` }}</text>
+            <wd-icon name="arrow-right" size="16" color="#969799" />
+          </view>
+          <view class="report-card__table">
+            <view v-if="filterDispatchOrder == null" class="report-card__row">
+              <text class="report-card__label">派工单</text>
+              <text class="report-card__value">{{ item.dispatch_order_code || '-' }}</text>
             </view>
-          </template>
-        </wd-cell>
-      </wd-cell-group>
+            <view class="report-card__row">
+              <text class="report-card__label">工序</text>
+              <text class="report-card__value">{{ item.process_name || '-' }}</text>
+            </view>
+            <view class="report-card__row">
+              <text class="report-card__label">报工数量</text>
+              <text class="report-card__value report-card__value--emphasis">
+                {{ item.quantity != null ? item.quantity : '-' }}
+              </text>
+            </view>
+            <view class="report-card__row">
+              <text class="report-card__label">报工日期</text>
+              <text class="report-card__value">{{ item.report_date || '-' }}</text>
+            </view>
+            <view class="report-card__row">
+              <text class="report-card__label">创建时间</text>
+              <text class="report-card__value">{{ formatDateTime(item.create_datetime) }}</text>
+            </view>
+          </view>
+        </view>
+      </view>
 
       <wd-loadmore :state="loadMoreState" />
 
@@ -54,7 +74,7 @@ import { formatDateTime } from '@/utils/format.js'
 
 /**
  * 报工记录
- * @description 分页展示生产报工记录
+ * @description 分页展示生产报工记录（卡片表格化布局）
  */
 export default {
   data() {
@@ -114,18 +134,7 @@ export default {
   },
 
   methods: {
-    /**
-     * 列表项副标题
-     * @param {Object} item - 报工行
-     * @returns {string}
-     */
-    cellLabel(item) {
-      const dispatch = item.dispatch_order_code || '-'
-      const proc = item.process_name || '-'
-      const date = item.report_date || '-'
-      const created = formatDateTime(item.create_datetime)
-      return `${dispatch}  ${proc}  报工日期 ${date}  创建 ${created}`
-    },
+    formatDateTime,
 
     /**
      * 拉取报工列表
@@ -250,15 +259,67 @@ export default {
   overflow-y: auto;
 }
 
-.cell-right {
+.report-cards {
+  padding: 24rpx;
   display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.report-card {
+  padding: 24rpx;
+  border-radius: 16rpx;
+  background-color: $uni-bg-color-white;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+}
+
+.report-card__header {
+  display: flex;
+  flex-direction: row;
   align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20rpx;
+  padding-bottom: 16rpx;
+  border-bottom: 1px solid $uni-border-color;
+}
+
+.report-card__code {
+  font-size: 30rpx;
+  font-weight: 500;
+  color: $uni-text-color;
+}
+
+.report-card__table {
+  display: flex;
+  flex-direction: column;
   gap: 12rpx;
 }
 
-.qty-text {
-  font-size: 28rpx;
+.report-card__row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  line-height: 1.5;
+}
+
+.report-card__label {
+  flex-shrink: 0;
+  width: 152rpx;
+  font-size: 26rpx;
   color: $uni-text-color-grey;
+}
+
+.report-card__value {
+  flex: 1;
+  min-width: 0;
+  font-size: 26rpx;
+  color: $uni-text-color;
+  word-break: break-all;
+}
+
+.report-card__value--emphasis {
+  font-weight: 500;
+  color: $uni-color-primary;
 }
 
 .loading-overlay {

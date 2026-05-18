@@ -26,6 +26,8 @@ export interface DispatchOrderListParams {
   production_order?: number
   process?: number
   status?: DispatchOrderStatus | string
+  /** 为 true 时仅返回当前用户接单的工单（管理员亦生效） */
+  mine?: boolean
 }
 
 /** 管理员派工请求体 POST .../dispatch/ */

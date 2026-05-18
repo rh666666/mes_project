@@ -223,6 +223,11 @@ class DispatchOrderListRequestSerializer(serializers.Serializer):
     production_order = serializers.IntegerField(required=False, help_text="生产任务单ID过滤")
     process = serializers.IntegerField(required=False, help_text="工序ID过滤")
     status = serializers.CharField(required=False, help_text="状态过滤")
+    mine = serializers.BooleanField(
+        required=False,
+        default=False,
+        help_text="为 true 时仅返回当前用户接单的工单（管理员亦生效，用于「我的工单」）",
+    )
 
 
 @extend_schema_serializer(many=False)

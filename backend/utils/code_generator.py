@@ -48,25 +48,20 @@ def generate_date_sequence_code(
 
     date_str = datetime.now().strftime(date_format)
     prefix_str = f"{prefix}-{date_str}-"
+    sequence_format = f"{{:0{sequence_length}d}}"
 
     with transaction.atomic():
         filter_kwargs = {f"{code_field}__startswith": prefix_str}
-        last_record = (
-            model_class.objects.filter(**filter_kwargs)
-            .order_by(f"-{code_field}")
-            .select_for_update()
-            .first()
-        )
+        queryset = model_class.objects.filter(**filter_kwargs).select_for_update()
 
-        if last_record:
+        max_sequence = 0
+        for code_value in queryset.values_list(code_field, flat=True):
+            if not code_value or len(code_value) < sequence_length:
+                continue
             try:
-                last_code = getattr(last_record, code_field)
-                last_sequence = int(last_code[-sequence_length:])
-                sequence = last_sequence + 1
-            except (ValueError, IndexError):
-                sequence = 1
-        else:
-            sequence = 1
+                max_sequence = max(max_sequence, int(code_value[-sequence_length:]))
+            except (ValueError, TypeError):
+                continue
 
-    sequence_format = f"{{:0{sequence_length}d}}"
-    return f"{prefix_str}{sequence_format.format(sequence)}"
+        sequence = max_sequence + 1
+        return f"{prefix_str}{sequence_format.format(sequence)}"
