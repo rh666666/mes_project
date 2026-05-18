@@ -49,6 +49,7 @@
 
 <script>
 import deviceApi, { DeviceStatus, DeviceStatusLabel } from '@/api/device'
+import { hideAppLoading, showAppLoading } from '@/utils/loading.js'
 
 /**
  * 设备编辑/创建页面
@@ -103,7 +104,7 @@ export default {
      * @async
      */
     async loadDeviceDetail() {
-      uni.showLoading({ title: '加载中...' })
+      showAppLoading({ title: '加载中...' })
       try {
         const res = await deviceApi.getDeviceDetail(this.deviceId)
         if (res.code === 2000) {
@@ -126,7 +127,7 @@ export default {
           icon: 'none'
         })
       } finally {
-        uni.hideLoading()
+        hideAppLoading()
       }
     },
 
@@ -212,7 +213,7 @@ export default {
     async onConfirmDelete() {
       if (!this.deviceId) return
 
-      uni.showLoading({ title: '删除中...' })
+      showAppLoading({ title: '删除中...' })
       try {
         const res = await deviceApi.deleteDevice(this.deviceId)
         if (res.code === 2000) {
@@ -234,7 +235,7 @@ export default {
           icon: 'none'
         })
       } finally {
-        uni.hideLoading()
+        hideAppLoading()
       }
     }
   }

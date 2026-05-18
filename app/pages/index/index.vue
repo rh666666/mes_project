@@ -1,31 +1,31 @@
 <template>
   <view class="page">
     <view class="content">
-      <!-- 管理员快捷入口 -->
-      <view v-if="isAdmin" class="admin-section">
-        <view
-          v-for="(group, groupIndex) in adminMenuGroups"
-          :key="group.key"
-          class="menu-group"
-        >
-          <view class="section-header">
-            <text class="section-title module-title">{{ group.title }}</text>
-          </view>
-          <wd-cell-group border>
-            <wd-cell
-              v-for="(item, itemIndex) in group.items"
-              :key="item.key"
-              :title="item.text"
-              :border="itemIndex !== group.items.length - 1"
-              is-link
-              @click="onMenuClick(item)"
-            />
-          </wd-cell-group>
+      <wd-card class="welcome-card">
+        <view class="welcome-card__body">
+          <text class="welcome-card__greeting">{{ greetingText }}</text>
+          <text class="welcome-card__hint">请选择下方功能开始作业</text>
         </view>
-      </view>
+      </wd-card>
 
-      <view v-else class="empty-section">
-        <wd-status-tip image="search" tip="暂无可用管理功能" />
+      <view class="feature-section">
+        <view class="section-header">
+          <text class="section-title">生产作业</text>
+        </view>
+        <wd-card
+          v-for="item in menuItems"
+          :key="item.key"
+          class="feature-card"
+          @click="onMenuClick(item)"
+        >
+          <view class="feature-card__body">
+            <view class="feature-card__main">
+              <text class="feature-card__title">{{ item.text }}</text>
+              <text class="feature-card__desc">{{ item.desc }}</text>
+            </view>
+            <wd-icon name="arrow-right" size="16" color="#969799" />
+          </view>
+        </wd-card>
       </view>
     </view>
   </view>
@@ -33,10 +33,11 @@
 
 <script>
 import { getStorageKey } from '@/config/index.js'
+import { applyTabBarByRole } from '@/utils/tab-bar.js'
 
 /**
  * 首页
- * @description 系统首页
+ * @description 员工生产作业入口：抢单中心、我的工单、报工记录（每项独立卡片）
  */
 export default {
   data() {
@@ -48,72 +49,40 @@ export default {
 
   computed: {
     /**
-     * 判断当前用户是否为管理员
-     * @returns {boolean}
+     * 问候语
+     * @returns {string}
      */
-    isAdmin() {
-      return this.userInfo && this.userInfo.role === 'admin'
+    greetingText() {
+      const name = this.userInfo.name || this.userInfo.username
+      if (name) {
+        return `你好，${name}`
+      }
+      return '你好'
     },
 
     /**
-     * 管理员菜单项
-     * @returns {Array}
+     * 功能入口菜单
+     * @returns {Array<{key:string,text:string,desc:string,url:string}>}
      */
-    adminMenuItems() {
-      return [
-        { text: '用户管理', key: 'userManagement', url: '/pages/admin/user/index' },
-        { text: '部门管理', key: 'deptManagement', url: '/pages/admin/dept/index' },
-        { text: '设备管理', key: 'deviceManagement', url: '/pages/admin/device/index' },
-        { text: '技能管理', key: 'skillManagement', url: '/pages/admin/skill/index' },
-        { text: '单位管理', key: 'unitManagement', url: '/pages/admin/unit/index' },
-        { text: '物料管理', key: 'materialManagement', url: '/pages/admin/material/index' },
-        { text: '工序管理', key: 'processManagement', url: '/pages/admin/process/index' },
-        { text: '工艺路线管理', key: 'processRouteManagement', url: '/pages/admin/process-route/index' },
-        { text: 'BOM 管理', key: 'bomManagement', url: '/pages/admin/bom/index' },
-        {
-          text: '生产任务单管理',
-          key: 'productionOrderManagement',
-          url: '/pages/admin/work-order/production-order/index'
-        },
-        {
-          text: '工序派工单管理',
-          key: 'dispatchOrderManagement',
-          url: '/pages/admin/work-order/dispatch-order/index'
-        }
-      ]
-    },
-
-    /**
-     * 管理员菜单分组
-     * @returns {Array}
-     */
-    adminMenuGroups() {
+    menuItems() {
       return [
         {
-          key: 'organization',
-          title: '组织与人员',
-          items: this.adminMenuItems.filter((item) => ['userManagement', 'deptManagement'].includes(item.key))
+          key: 'grabCenter',
+          text: '抢单中心',
+          desc: '查看并抢取待派工的工序工单',
+          url: '/pages/work-order/grab-center/index'
         },
         {
-          key: 'resource',
-          title: '资源与能力',
-          items: this.adminMenuItems.filter((item) =>
-            ['deviceManagement', 'skillManagement', 'unitManagement', 'materialManagement'].includes(item.key)
-          )
+          key: 'myOrders',
+          text: '我的工单',
+          desc: '查看已接单或进行中的工单',
+          url: '/pages/work-order/my-orders/index'
         },
         {
-          key: 'process',
-          title: '工艺流程',
-          items: this.adminMenuItems.filter((item) =>
-            ['processManagement', 'processRouteManagement', 'bomManagement'].includes(item.key)
-          )
-        },
-        {
-          key: 'workOrder',
-          title: '工单管理',
-          items: this.adminMenuItems.filter((item) =>
-            ['productionOrderManagement', 'dispatchOrderManagement'].includes(item.key)
-          )
+          key: 'reportList',
+          text: '报工记录',
+          desc: '查看历史生产报工记录',
+          url: '/pages/work-order/report-list/index'
         }
       ]
     }
@@ -121,11 +90,15 @@ export default {
 
   onShow() {
     this.loadUserInfo()
+    this.$nextTick(() => {
+      applyTabBarByRole(this.userInfo)
+    })
   },
 
   methods: {
     /**
-     * 加载用户信息
+     * 从本地存储加载用户信息
+     * @returns {void}
      */
     loadUserInfo() {
       const userInfo = uni.getStorageSync(getStorageKey('user_info'))
@@ -133,8 +106,9 @@ export default {
     },
 
     /**
-     * 菜单点击事件
-     * @param {Object} item - 菜单项
+     * 菜单点击跳转
+     * @param {{url?: string}} item - 菜单项
+     * @returns {void}
      */
     onMenuClick(item) {
       if (!item || !item.url) {
@@ -159,39 +133,87 @@ export default {
 
 .content {
   flex: 1;
-  padding: 32rpx;
+  padding: 24rpx;
 }
 
-.admin-section {
-  margin-top: 8rpx;
+.welcome-card {
+  margin: 0 0 32rpx 0;
+  width: 100%;
 }
 
-.menu-group {
-  margin-top: 20rpx;
-  padding: 20rpx;
-  border-radius: 16rpx;
-  background-color: #ffffff;
+:deep(.welcome-card .wd-card) {
+  margin: 0;
+}
+
+.welcome-card__body {
+  padding: 32rpx 24rpx;
+}
+
+.welcome-card__greeting {
+  display: block;
+  font-size: 36rpx;
+  font-weight: 600;
+  color: $uni-text-color;
+  margin-bottom: 12rpx;
+}
+
+.welcome-card__hint {
+  display: block;
+  font-size: 28rpx;
+  color: $uni-text-color-grey;
+}
+
+.feature-section {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
 }
 
 .section-header {
-  margin-bottom: 16rpx;
+  padding: 0 8rpx;
 }
 
 .section-title {
   font-size: 26rpx;
   font-weight: 500;
-  color: $uni-text-color;
-}
-
-.module-title {
-  font-weight: 400;
   color: $uni-text-color-grey;
 }
 
-.empty-section {
-  margin-top: 40rpx;
-  padding: 28rpx 20rpx;
-  border-radius: 16rpx;
-  background-color: #ffffff;
+.feature-card {
+  width: 100%;
+  margin: 0;
+}
+
+:deep(.feature-card .wd-card) {
+  margin: 0;
+}
+
+.feature-card__body {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28rpx 24rpx;
+  gap: 24rpx;
+}
+
+.feature-card__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.feature-card__title {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 500;
+  color: $uni-text-color;
+  margin-bottom: 8rpx;
+}
+
+.feature-card__desc {
+  display: block;
+  font-size: 26rpx;
+  color: $uni-text-color-grey;
+  line-height: 1.4;
 }
 </style>

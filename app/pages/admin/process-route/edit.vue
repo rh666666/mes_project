@@ -85,6 +85,7 @@
 
 <script>
 import processRouteApi from '@/api/process-route'
+import { hideAppLoading, showAppLoading } from '@/utils/loading.js'
 import materialApi from '@/api/material'
 import SearchableSelector from '@/components/ui/SearchableSelector/SearchableSelector.vue'
 
@@ -159,7 +160,7 @@ export default {
      * API调用：processRouteApi.getProcessRouteDetail
      */
     async loadProcessRouteDetail() {
-      uni.showLoading({ title: '加载中...' })
+      showAppLoading({ title: '加载中...' })
       try {
         const res = await processRouteApi.getProcessRouteDetail(this.processRouteId)
         if (res.code === 2000) {
@@ -183,7 +184,7 @@ export default {
           icon: 'none'
         })
       } finally {
-        uni.hideLoading()
+        hideAppLoading()
       }
     },
 
@@ -296,7 +297,7 @@ export default {
     async onConfirmDelete() {
       if (!this.processRouteId) return
 
-      uni.showLoading({ title: '删除中...' })
+      showAppLoading({ title: '删除中...' })
       try {
         const res = await processRouteApi.deleteProcessRoute(this.processRouteId)
         if (res.code === 2000) {
@@ -318,7 +319,7 @@ export default {
           icon: 'none'
         })
       } finally {
-        uni.hideLoading()
+        hideAppLoading()
       }
     }
   }

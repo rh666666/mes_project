@@ -59,6 +59,7 @@
 
 <script>
 import bomApi from '@/api/bom'
+import { hideAppLoading, showAppLoading } from '@/utils/loading.js'
 
 /**
  * BOM 管理列表页面
@@ -248,7 +249,7 @@ export default {
           if (!res.confirm) {
             return
           }
-          uni.showLoading({ title: '删除中...' })
+          showAppLoading({ title: '删除中...' })
           try {
             const result = await bomApi.deleteBom(item.id)
             if (result.code === 2000) {
@@ -261,7 +262,7 @@ export default {
             console.error('删除 BOM 失败:', error)
             uni.showToast({ title: error.msg || '删除失败', icon: 'none' })
           } finally {
-            uni.hideLoading()
+            hideAppLoading()
           }
         }
       })

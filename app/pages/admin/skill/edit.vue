@@ -49,6 +49,7 @@
 
 <script>
 import skillApi, { SkillType, SkillTypeLabel } from '@/api/skill'
+import { hideAppLoading, showAppLoading } from '@/utils/loading.js'
 
 /**
  * 技能编辑/创建页面
@@ -98,7 +99,7 @@ export default {
      * @async
      */
     async loadSkillDetail() {
-      uni.showLoading({ title: '加载中...' })
+      showAppLoading({ title: '加载中...' })
       try {
         const res = await skillApi.getSkillDetail(this.skillId)
         if (res.code === 2000) {
@@ -121,7 +122,7 @@ export default {
           icon: 'none'
         })
       } finally {
-        uni.hideLoading()
+        hideAppLoading()
       }
     },
 
@@ -215,7 +216,7 @@ export default {
     async onConfirmDelete() {
       if (!this.skillId) return
 
-      uni.showLoading({ title: '删除中...' })
+      showAppLoading({ title: '删除中...' })
       try {
         const res = await skillApi.deleteSkill(this.skillId)
         if (res.code === 2000) {
@@ -237,7 +238,7 @@ export default {
           icon: 'none'
         })
       } finally {
-        uni.hideLoading()
+        hideAppLoading()
       }
     }
   }

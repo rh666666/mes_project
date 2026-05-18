@@ -74,6 +74,7 @@
 
 <script>
 import authApi from '@/api/auth'
+import { hideAppLoading, showAppLoading } from '@/utils/loading.js'
 import deptApi from '@/api/dept'
 import SearchableSelector from '@/components/ui/SearchableSelector/SearchableSelector.vue'
 
@@ -208,7 +209,7 @@ export default {
      * @async
      */
     async loadUserFromList() {
-      uni.showLoading({ title: '加载中...' })
+      showAppLoading({ title: '加载中...' })
       try {
         const res = await authApi.getUserList({ page: 1, limit: 100 })
         if (res.code === 2000) {
@@ -234,7 +235,7 @@ export default {
           icon: 'none'
         })
       } finally {
-        uni.hideLoading()
+        hideAppLoading()
       }
     },
 

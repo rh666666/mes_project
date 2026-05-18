@@ -44,6 +44,7 @@
 
 <script>
 import authApi from '@/api/auth'
+import { hideAppLoading, showAppLoading } from '@/utils/loading.js'
 import { getStorageKey, getApiBaseURL } from '@/config/index.js'
 
 /**
@@ -134,7 +135,7 @@ export default {
     },
 
     async updateAvatar(filePath) {
-      uni.showLoading({ title: '上传中...' })
+      showAppLoading({ title: '上传中...' })
 
       try {
         const res = await authApi.updateAvatar({ avatar: filePath })
@@ -164,7 +165,7 @@ export default {
           icon: 'none'
         })
       } finally {
-        uni.hideLoading()
+        hideAppLoading()
       }
     },
 

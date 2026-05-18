@@ -79,6 +79,7 @@
 import materialApi from '@/api/material'
 import processRouteApi from '@/api/process-route'
 import productionOrderApi from '@/api/production-order'
+import { hideAppLoading, showAppLoading } from '@/utils/loading.js'
 import SearchableSelector from '@/components/ui/SearchableSelector/SearchableSelector.vue'
 import { getStorageKey } from '@/config/index.js'
 import { clampApiListLimit, fetchAllPagesWithPagedApi } from '@/utils/common.js'
@@ -222,7 +223,7 @@ export default {
      * @returns {Promise<void>}
      */
     async loadDetail() {
-      uni.showLoading({ title: '加载中...' })
+      showAppLoading({ title: '加载中...' })
       try {
         const res = await productionOrderApi.getProductionOrderDetail(this.orderId)
         if (res.code === 2000) {
@@ -245,7 +246,7 @@ export default {
         console.error('加载任务单详情失败:', error)
         uni.showToast({ title: error.msg || '加载失败', icon: 'none' })
       } finally {
-        uni.hideLoading()
+        hideAppLoading()
       }
     },
 

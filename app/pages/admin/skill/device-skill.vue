@@ -122,6 +122,7 @@
 
 <script>
 import skillApi from '@/api/skill'
+import { hideAppLoading, showAppLoading } from '@/utils/loading.js'
 import deviceApi from '@/api/device'
 import SearchableSelector from '@/components/ui/SearchableSelector/SearchableSelector.vue'
 
@@ -474,7 +475,7 @@ export default {
      * @param {number} id - 绑定记录ID
      */
     async onConfirmDelete(id) {
-      uni.showLoading({ title: '删除中...' })
+      showAppLoading({ title: '删除中...' })
       try {
         const res = await skillApi.deleteDeviceSkill(id)
         if (res.code === 2000) {
@@ -496,7 +497,7 @@ export default {
           icon: 'none'
         })
       } finally {
-        uni.hideLoading()
+        hideAppLoading()
       }
     },
 

@@ -30,6 +30,8 @@
 </template>
 
 <script>
+import { hideAppLoading, showAppLoading } from '@/utils/loading.js'
+
 /**
  * 通用表单视图组件
  * @component
@@ -224,7 +226,7 @@ export default {
         return
       }
 
-      uni.showLoading({ title: '删除中...' })
+      showAppLoading({ title: '删除中...' })
       try {
         const result = await this.deleteApi()
         if (result.code === 2000) {
@@ -249,7 +251,7 @@ export default {
           icon: 'none'
         })
       } finally {
-        uni.hideLoading()
+        hideAppLoading()
       }
     },
     /**

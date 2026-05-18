@@ -52,6 +52,8 @@
 <script>
 import authApi from '@/api/auth'
 import { getStorageKey, getApiBaseURL } from '@/config/index.js'
+import { applyTabBarByRole } from '@/utils/tab-bar.js'
+import { hideAppLoading, showAppLoading, showToastAfterLoading } from '@/utils/loading.js'
 
 /**
  * 个人中心页面
@@ -92,6 +94,9 @@ export default {
 
   onShow() {
     this.checkLoginStatus()
+    this.$nextTick(() => {
+      applyTabBarByRole(this.userInfo)
+    })
   },
 
   methods: {
@@ -109,7 +114,8 @@ export default {
               username: res.data.username,
               name: res.data.name,
               avatar: res.data.avatar || '',
-              signature: res.data.signature || ''
+              signature: res.data.signature || '',
+              role: res.data.role || 'user'
             }
             uni.setStorageSync(getStorageKey('user_info'), userInfo)
           }
@@ -119,6 +125,7 @@ export default {
       }
 
       this.userInfo = userInfo || {}
+      applyTabBarByRole(this.userInfo)
     },
 
     getAvatarUrl(avatar) {
@@ -151,6 +158,8 @@ export default {
         case 'about':
           this.onAbout()
           break
+        default:
+          break
       }
     },
 
@@ -175,7 +184,8 @@ export default {
     },
 
     async performLogout() {
-      uni.showLoading({ title: '注销中...' })
+      showAppLoading('注销中...')
+      let logoutOk = false
 
       try {
         const res = await authApi.logout()
@@ -188,25 +198,30 @@ export default {
 
           this.isLoggedIn = false
           this.userInfo = {}
-
-          uni.showToast({
-            title: '已退出登录',
-            icon: 'success'
-          })
+          logoutOk = true
         } else {
-          uni.showToast({
+          showToastAfterLoading({
             title: res.msg || '注销失败',
             icon: 'none'
           })
         }
       } catch (error) {
         console.error('注销请求失败:', error)
-        uni.showToast({
+        showToastAfterLoading({
           title: error.msg || '注销失败，请稍后重试',
           icon: 'none'
         })
       } finally {
-        uni.hideLoading()
+        hideAppLoading()
+      }
+
+      if (logoutOk) {
+        applyTabBarByRole(null)
+        uni.switchTab({ url: '/pages/index/index' })
+        uni.showToast({
+          title: '已退出登录',
+          icon: 'success'
+        })
       }
     },
 

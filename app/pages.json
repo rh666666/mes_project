@@ -13,6 +13,42 @@
 			}
 		},
 		{
+			"path": "pages/work-order/grab-center/index",
+			"style": {
+				"navigationBarTitleText": "抢单中心"
+			}
+		},
+		{
+			"path": "pages/work-order/my-orders/index",
+			"style": {
+				"navigationBarTitleText": "我的工单"
+			}
+		},
+		{
+			"path": "pages/work-order/report-list/index",
+			"style": {
+				"navigationBarTitleText": "报工记录"
+			}
+		},
+		{
+			"path": "pages/work-order/report-detail/index",
+			"style": {
+				"navigationBarTitleText": "报工详情"
+			}
+		},
+		{
+			"path": "pages/work-order/dispatch-detail/index",
+			"style": {
+				"navigationBarTitleText": "派工单详情"
+			}
+		},
+		{
+			"path": "pages/manage/index",
+			"style": {
+				"navigationBarTitleText": "管理"
+			}
+		},
+		{
 			"path": "pages/profile/index",
 			"style": {
 				"navigationBarTitleText": "我的"
@@ -199,6 +235,22 @@
 							}
 						]
 					}
+				},
+				"h5": {
+					"titleNView": {
+						"buttons": [
+							{
+								"text": "\u22EE",
+								"fontSize": "22px",
+								"width": "44px"
+							},
+							{
+								"text": "\u27F3",
+								"fontSize": "22px",
+								"width": "44px"
+							}
+						]
+					}
 				}
 			}
 		},
@@ -235,6 +287,62 @@
 					}
 				}
 			}
+		},
+		{
+			"path": "pages/admin/work-order/production-report/index",
+			"style": {
+				"navigationBarTitleText": "生产报工单管理"
+			}
+		},
+		{
+			"path": "pages/admin/work-order/production-report/detail",
+			"style": {
+				"navigationBarTitleText": "报工详情"
+			}
+		},
+		{
+			"path": "pages/admin/work-order/quality-check-order/index",
+			"style": {
+				"navigationBarTitleText": "质检任务单管理"
+			}
+		},
+		{
+			"path": "pages/admin/work-order/quality-check-order/detail",
+			"style": {
+				"navigationBarTitleText": "质检详情",
+				"app-plus": {
+					"titleNView": {
+						"buttons": [
+							{
+								"text": "\u22EE",
+								"fontSize": "22px",
+								"width": "44px"
+							},
+							{
+								"text": "\u27F3",
+								"fontSize": "22px",
+								"width": "44px"
+							}
+						]
+					}
+				},
+				"h5": {
+					"titleNView": {
+						"buttons": [
+							{
+								"text": "\u22EE",
+								"fontSize": "22px",
+								"width": "44px"
+							},
+							{
+								"text": "\u27F3",
+								"fontSize": "22px",
+								"width": "44px"
+							}
+						]
+					}
+				}
+			}
 		}
 	],
 	"globalStyle": {
@@ -248,9 +356,15 @@
 		"list": [
 			{
 				"pagePath": "pages/index/index",
+				"text": "首页",
+				"iconPath": "static/icons/home_24dp_000000_FILL0_wght400_GRAD0_opsz24.png",
+				"selectedIconPath": "static/icons/home_24dp_000000_FILL1_wght400_GRAD0_opsz24.png"
+			},
+			{
+				"pagePath": "pages/manage/index",
 				"text": "管理",
-				"iconPath": "static/icons/factory_24dp_000000_FILL0_wght400_GRAD0_opsz24.png",
-				"selectedIconPath": "static/icons/factory_24dp_000000_FILL1_wght400_GRAD0_opsz24.png"
+				"iconPath": "static/icons/hardware_24dp_000000_FILL0_wght400_GRAD0_opsz24.png",
+				"selectedIconPath": "static/icons/hardware_24dp_000000_FILL1_wght400_GRAD0_opsz24.png"
 			},
 			{
 				"pagePath": "pages/profile/index",

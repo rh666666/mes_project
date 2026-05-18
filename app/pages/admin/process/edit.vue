@@ -51,6 +51,7 @@
 
 <script>
 import processApi from '@/api/process'
+import { hideAppLoading, showAppLoading } from '@/utils/loading.js'
 
 /**
  * 工序编辑/创建页面
@@ -94,7 +95,7 @@ export default {
      * @async
      */
     async loadProcessDetail() {
-      uni.showLoading({ title: '加载中...' })
+      showAppLoading({ title: '加载中...' })
       try {
         const res = await processApi.getProcessDetail(this.processId)
         if (res.code === 2000) {
@@ -117,7 +118,7 @@ export default {
           icon: 'none'
         })
       } finally {
-        uni.hideLoading()
+        hideAppLoading()
       }
     },
 
@@ -204,7 +205,7 @@ export default {
     async onConfirmDelete() {
       if (!this.processId) return
 
-      uni.showLoading({ title: '删除中...' })
+      showAppLoading({ title: '删除中...' })
       try {
         const res = await processApi.deleteProcess(this.processId)
         if (res.code === 2000) {
@@ -226,7 +227,7 @@ export default {
           icon: 'none'
         })
       } finally {
-        uni.hideLoading()
+        hideAppLoading()
       }
     }
   }

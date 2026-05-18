@@ -90,6 +90,7 @@
 
 <script>
 import materialApi from '@/api/material'
+import { hideAppLoading, showAppLoading } from '@/utils/loading.js'
 import unitApi from '@/api/unit'
 import SearchableSelector from '@/components/ui/SearchableSelector/SearchableSelector.vue'
 
@@ -157,7 +158,7 @@ export default {
      * @async
      */
     async loadMaterialDetail() {
-      uni.showLoading({ title: '加载中...' })
+      showAppLoading({ title: '加载中...' })
       try {
         const res = await materialApi.getMaterialDetail(this.materialId)
         if (res.code === 2000) {
@@ -183,7 +184,7 @@ export default {
           icon: 'none'
         })
       } finally {
-        uni.hideLoading()
+        hideAppLoading()
       }
     },
 
@@ -291,7 +292,7 @@ export default {
     async onConfirmDelete() {
       if (!this.materialId) return
 
-      uni.showLoading({ title: '删除中...' })
+      showAppLoading({ title: '删除中...' })
       try {
         const res = await materialApi.deleteMaterial(this.materialId)
         if (res.code === 2000) {
@@ -313,7 +314,7 @@ export default {
           icon: 'none'
         })
       } finally {
-        uni.hideLoading()
+        hideAppLoading()
       }
     }
   }

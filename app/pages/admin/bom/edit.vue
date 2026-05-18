@@ -74,6 +74,7 @@
 
 <script>
 import bomApi from '@/api/bom'
+import { hideAppLoading, showAppLoading } from '@/utils/loading.js'
 import materialApi from '@/api/material'
 import SearchableSelector from '@/components/ui/SearchableSelector/SearchableSelector.vue'
 
@@ -139,7 +140,7 @@ export default {
      * @returns {Promise<void>}
      */
     async loadBomDetail() {
-      uni.showLoading({ title: '加载中...' })
+      showAppLoading({ title: '加载中...' })
       try {
         const res = await bomApi.getBomDetail(this.bomId)
         if (res.code === 2000) {
@@ -158,7 +159,7 @@ export default {
         console.error('获取 BOM 详情失败:', error)
         uni.showToast({ title: error.msg || '获取 BOM 详情失败', icon: 'none' })
       } finally {
-        uni.hideLoading()
+        hideAppLoading()
       }
     },
 
@@ -242,7 +243,7 @@ export default {
       if (!this.bomId) {
         return
       }
-      uni.showLoading({ title: '删除中...' })
+      showAppLoading({ title: '删除中...' })
       try {
         const res = await bomApi.deleteBom(this.bomId)
         if (res.code === 2000) {
@@ -255,7 +256,7 @@ export default {
         console.error('删除 BOM 失败:', error)
         uni.showToast({ title: error.msg || '删除失败', icon: 'none' })
       } finally {
-        uni.hideLoading()
+        hideAppLoading()
       }
     }
   }

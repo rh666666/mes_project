@@ -98,6 +98,7 @@
 <script>
 import bomApi from '@/api/bom'
 import materialApi from '@/api/material'
+import { hideAppLoading, showAppLoading } from '@/utils/loading.js'
 import SearchableSelector from '@/components/ui/SearchableSelector/SearchableSelector.vue'
 import BomDetailTreeList from '@/components/business/BomDetailTreeList.vue'
 
@@ -182,7 +183,7 @@ export default {
       if (!this.bomId) {
         return
       }
-      uni.showLoading({ title: '加载中...' })
+      showAppLoading({ title: '加载中...' })
       try {
         const [bomRes, detailRes] = await Promise.all([
           bomApi.getBomDetail(this.bomId),
@@ -205,7 +206,7 @@ export default {
         console.error('加载 BOM 详情页失败:', error)
         uni.showToast({ title: error.msg || '加载失败', icon: 'none' })
       } finally {
-        uni.hideLoading()
+        hideAppLoading()
       }
     },
 
@@ -264,10 +265,10 @@ export default {
 
         const res = await bomApi.createBomDetail(payload)
         if (res.code === 2000) {
-          uni.showToast({ title: '新增成功', icon: 'success' })
           this.resetCreateForm()
           this.showCreatePopup = false
-          this.loadPageData()
+          await this.loadPageData()
+          uni.showToast({ title: '新增成功', icon: 'success' })
           return
         }
         uni.showToast({ title: res.msg || '新增失败', icon: 'none' })
@@ -293,12 +294,12 @@ export default {
           if (!res.confirm) {
             return
           }
-          uni.showLoading({ title: '删除中...' })
+          showAppLoading({ title: '删除中...' })
           try {
             const result = await bomApi.deleteBomDetail(detail.id)
             if (result.code === 2000) {
+              await this.loadPageData()
               uni.showToast({ title: '删除成功', icon: 'success' })
-              this.loadPageData()
             } else {
               uni.showToast({ title: result.msg || '删除失败', icon: 'none' })
             }
@@ -306,7 +307,7 @@ export default {
             console.error('删除 BOM 详情失败:', error)
             uni.showToast({ title: error.msg || '删除失败', icon: 'none' })
           } finally {
-            uni.hideLoading()
+            hideAppLoading()
           }
         }
       })

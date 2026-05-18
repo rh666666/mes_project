@@ -48,6 +48,7 @@
           <wd-icon name="close" size="20" @click="closeOperationDrawer" />
         </view>
         <wd-cell-group border class="operation-drawer-body">
+          <wd-cell title="查看报工记录" is-link @click="onDrawerReportList" />
           <wd-cell v-if="canDispatch" title="派工" is-link @click="onDrawerDispatch" />
           <wd-cell v-if="canSplit" title="拆分派工单" is-link @click="onDrawerSplit" />
         </wd-cell-group>
@@ -329,6 +330,19 @@ export default {
      */
     onOperationDrawerClose() {
       this.showOperationDrawer = false
+    },
+
+    /**
+     * 抽屉内：查看该派工单下的报工记录
+     */
+    onDrawerReportList() {
+      if (this.orderId == null) {
+        return
+      }
+      this.closeOperationDrawer()
+      uni.navigateTo({
+        url: `/pages/admin/work-order/production-report/index?dispatch_order=${this.orderId}`
+      })
     },
 
     /**

@@ -56,6 +56,57 @@ export function formatDateTime(value, emptyPlaceholder = '-') {
 }
 
 /**
+ * 将 Django Duration 或 HH:MM:SS 字符串格式化为可读中文时长
+ * @param {string|null|undefined} value - 如 `01:30:00`、`2 01:30:00.123456`
+ * @param {string} [emptyPlaceholder='-'] - 无值或非法时的展示文案
+ * @returns {string}
+ */
+export function formatDuration(value, emptyPlaceholder = '-') {
+  if (value === null || value === undefined || value === '') {
+    return emptyPlaceholder
+  }
+  const raw = String(value).trim()
+  if (!raw) {
+    return emptyPlaceholder
+  }
+
+  let days = 0
+  let timePart = raw
+  const dayMatch = raw.match(/^(\d+)\s+(.+)$/)
+  if (dayMatch) {
+    days = parseInt(dayMatch[1], 10)
+    timePart = dayMatch[2]
+  }
+
+  const segments = timePart.split(':')
+  if (segments.length < 2 || segments.length > 3) {
+    return emptyPlaceholder
+  }
+
+  const hours = parseInt(segments[0], 10)
+  const minutes = parseInt(segments[1], 10)
+  const secondsPart = segments[2] != null ? segments[2].split('.')[0] : '0'
+  const seconds = parseInt(secondsPart, 10)
+
+  if ([hours, minutes, seconds, days].some((n) => Number.isNaN(n) || n < 0)) {
+    return emptyPlaceholder
+  }
+
+  const totalHours = days * 24 + hours
+  const parts = []
+  if (totalHours > 0) {
+    parts.push(`${totalHours}小时`)
+  }
+  if (minutes > 0) {
+    parts.push(`${minutes}分`)
+  }
+  if (seconds > 0 || parts.length === 0) {
+    parts.push(`${seconds}秒`)
+  }
+  return parts.join('')
+}
+
+/**
  * 获取完整头像URL
  * @param {string} avatar - 头像路径
  * @returns {string}

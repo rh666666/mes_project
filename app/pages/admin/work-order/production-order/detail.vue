@@ -60,6 +60,7 @@
         </view>
         <wd-cell-group border class="operation-drawer-body">
           <wd-cell v-if="order" title="查看工序派工单" is-link @click="onDrawerDispatchList" />
+          <wd-cell v-if="order" title="查看质检任务单" is-link @click="onDrawerQualityCheckList" />
           <wd-cell
             v-if="order && order.status === 'pending'"
             title="下发"
@@ -87,47 +88,6 @@
         </wd-cell-group>
       </view>
     </wd-popup>
-
-    <!-- #ifndef APP-PLUS -->
-    <view v-if="order" class="content content--footer-actions">
-      <view class="section-header section-mt">
-        <text class="section-title">操作</text>
-      </view>
-      <view class="actions">
-        <wd-button
-          v-if="order.status === 'pending'"
-          type="primary"
-          block
-          :loading="actionLoading === 'publish'"
-          @click="onPublish"
-        >
-          下发
-        </wd-button>
-        <wd-button v-if="order.status === 'pending'" plain block @click="onGoEdit">编辑</wd-button>
-        <wd-button
-          v-if="order.status === 'pending'"
-          type="error"
-          plain
-          block
-          :loading="actionLoading === 'delete'"
-          @click="onDelete"
-        >
-          删除
-        </wd-button>
-        <wd-button
-          v-if="order.status === 'published'"
-          type="warning"
-          block
-          :loading="actionLoading === 'cancel'"
-          @click="onCancel"
-        >
-          取消任务单
-        </wd-button>
-        <wd-button plain block @click="onGoDispatchList">查看工序派工单</wd-button>
-        <wd-button plain block :loading="reloadLoading" @click="reload">刷新</wd-button>
-      </view>
-    </view>
-    <!-- #endif -->
   </view>
 </template>
 
@@ -138,7 +98,7 @@ import { getStorageKey } from '@/config/index.js'
 
 /**
  * 生产任务单详情（管理员）
- * @description 展示详情、原材料与派工进度；App 端操作与工序派工单详情一致（导航栏更多 + 刷新、右侧抽屉）；非 App 保留底部操作区
+ * @description 展示详情、原材料与派工进度；导航栏更多 + 刷新、右侧操作抽屉（与工序派工单详情一致）
  */
 export default {
   data() {
@@ -316,6 +276,16 @@ export default {
     },
 
     /**
+     * 抽屉内：查看质检任务单
+     */
+    onDrawerQualityCheckList() {
+      this.closeOperationDrawer()
+      this.$nextTick(() => {
+        this.onGoQualityCheckList()
+      })
+    },
+
+    /**
      * 加载详情与工艺路线摘要
      * @returns {Promise<void>}
      */
@@ -477,11 +447,20 @@ export default {
     },
 
     /**
-     * 跳转工序派工单占位列表（带生产任务单过滤参数）
+     * 跳转工序派工单列表（带生产任务单过滤参数）
      */
     onGoDispatchList() {
       uni.navigateTo({
         url: `/pages/admin/work-order/dispatch-order/index?production_order=${this.orderId}`
+      })
+    },
+
+    /**
+     * 跳转质检任务单列表（带生产任务单过滤参数）
+     */
+    onGoQualityCheckList() {
+      uni.navigateTo({
+        url: `/pages/admin/work-order/quality-check-order/index?production_order=${this.orderId}`
       })
     }
   }
@@ -510,13 +489,6 @@ export default {
   font-size: 28rpx;
   font-weight: 500;
   color: $uni-text-color;
-}
-
-.actions {
-  display: flex;
-  flex-direction: column;
-  gap: 24rpx;
-  margin-top: 16rpx;
 }
 
 .loading-wrap {
@@ -560,11 +532,4 @@ export default {
 .operation-drawer-body {
   flex: 1;
 }
-
-/* #ifndef APP-PLUS */
-.content--footer-actions {
-  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
-}
-
-/* #endif */
 </style>
