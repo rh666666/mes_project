@@ -23,6 +23,7 @@ from mes.serializers.orders import (
     DispatchOrderListRequestSerializer,
     DispatchOrderListResponseSerializer,
     DispatchOrderSerializer,
+    DispatchOrderGrabRequestSerializer,
     DispatchOrderSplitRequestSerializer,
     ProductionOrderCreateRequestSerializer,
     ProductionOrderDetailResponseSerializer,
@@ -624,7 +625,9 @@ class DispatchOrderViewSet(viewsets.ViewSet):
         description=(
             "员工手动抢单。须为待抢单、非父工单、前置工序已产出，"
             "且拥有该工序要求的全部技能（工序未配置技能则无门槛）。"
+            "可传 quantity 指定抢单数量；小于剩余可生产数量时自动拆分子工单并接取子单。"
         ),
+        request=DispatchOrderGrabRequestSerializer,
         responses={
             200: OpenApiResponse(response=DetailResponse, description="抢单成功"),
             400: OpenApiResponse(response=ErrorResponse, description="派工单状态不正确或不可抢单"),
@@ -643,7 +646,7 @@ class DispatchOrderViewSet(viewsets.ViewSet):
             pk: 工序派工单ID
 
         Returns:
-            Response: 抢单结果
+            Response: 抢单结果（部分抢单时返回已接取的子工单）
         """
         try:
             order = DispatchOrder.objects.get(id=pk)
@@ -664,12 +667,36 @@ class DispatchOrderViewSet(viewsets.ViewSet):
         if not user_meets_process_skills(request.user.id, order.process_id):
             return ErrorResponse(msg=SKILL_MISMATCH_MSG, status=status.HTTP_400_BAD_REQUEST)
 
-        order.operator = request.user
-        order.status = DispatchOrder.Status.GRABBED
-        order.save()
+        grab_serializer = DispatchOrderGrabRequestSerializer(
+            data=request.data,
+            context={"dispatch_order": order},
+        )
+        if not grab_serializer.is_valid():
+            return ErrorResponse(msg=grab_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        logger.info("工序派工单已抢单: ID=%s, 员工=%s", pk, request.user.name)
-        return DetailResponse(data=DispatchOrderSerializer(order).data, msg="抢单成功")
+        grab_quantity = grab_serializer.validated_data["quantity"]
+        remaining = grab_serializer.validated_data["remaining"]
+        target_order = order
+
+        if grab_quantity < remaining:
+            try:
+                target_order = order.split(grab_quantity)
+                order.peel_remainder_to_pending_child()
+            except ValueError as exc:
+                return ErrorResponse(msg=str(exc), status=status.HTTP_400_BAD_REQUEST)
+
+        target_order.operator = request.user
+        target_order.status = DispatchOrder.Status.GRABBED
+        target_order.save()
+
+        logger.info(
+            "工序派工单已抢单: 源ID=%s, 接取ID=%s, 数量=%s, 员工=%s",
+            pk,
+            target_order.id,
+            grab_quantity,
+            request.user.name,
+        )
+        return DetailResponse(data=DispatchOrderSerializer(target_order).data, msg="抢单成功")
 
     @extend_schema(
         summary="开始生产",
@@ -807,7 +834,7 @@ class DispatchOrderViewSet(viewsets.ViewSet):
 
     @extend_schema(
         summary="生产报工",
-        description="生产报工",
+        description="员工生产报工；仅允许状态为生产中的派工单，累计报工可超过计划数量",
         request=ProductionReportCreateRequestSerializer,
         responses={
             200: OpenApiResponse(response=DetailResponse, description="报工成功"),
@@ -838,8 +865,8 @@ class DispatchOrderViewSet(viewsets.ViewSet):
         if order.operator != request.user:
             return ErrorResponse(msg="只能报工自己的工单", status=status.HTTP_403_FORBIDDEN)
 
-        if order.status not in [DispatchOrder.Status.IN_PROGRESS, DispatchOrder.Status.GRABBED]:
-            return ErrorResponse(msg="只能报工生产中或已抢单的工单", status=status.HTTP_400_BAD_REQUEST)
+        if order.status != DispatchOrder.Status.IN_PROGRESS:
+            return ErrorResponse(msg="只能报工生产中的工单", status=status.HTTP_400_BAD_REQUEST)
 
         serializer = ProductionReportCreateRequestSerializer(data=request.data)
         if not serializer.is_valid():

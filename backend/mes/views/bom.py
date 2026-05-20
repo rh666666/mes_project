@@ -8,6 +8,7 @@ from __future__ import annotations
 import logging
 
 from django.db import transaction
+from django.db.models import Q
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.permissions import BasePermission
@@ -32,6 +33,29 @@ from mes.serializers.bom import (
 from utils import DetailResponse, ErrorResponse, SuccessResponse
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_detail_sub_bom(material: Material, sub_bom_id: int | None) -> tuple[BillOfMaterial | None, str | None]:
+    """解析 BOM 明细行的子物料清单。
+
+    子 BOM 必须属于所选子物料；未指定时默认取该物料下优先启用的最新 BOM。
+
+    Args:
+        material: 子物料实例
+        sub_bom_id: 请求指定的子 BOM ID，可为空
+
+    Returns:
+        tuple: (子 BOM 实例或 None, 错误消息或 None)
+    """
+    queryset = BillOfMaterial.objects.filter(material_id=material.id).order_by("-is_active", "-create_datetime", "id")
+    if sub_bom_id:
+        sub_bom = queryset.filter(id=sub_bom_id).first()
+        if not sub_bom:
+            return None, "子物料清单必须为该子物料名下的 BOM"
+        return sub_bom, None
+
+    sub_bom = queryset.first()
+    return sub_bom, None
 
 
 class IsAdmin(BasePermission):
@@ -81,13 +105,20 @@ class BillOfMaterialViewSet(viewsets.ViewSet):
         limit = serializer.validated_data.get("limit", 10)
         material_filter = serializer.validated_data.get("material")
         version_filter = serializer.validated_data.get("version")
+        search_filter = serializer.validated_data.get("search")
 
-        queryset = BillOfMaterial.objects.all().order_by("-create_datetime")
+        queryset = BillOfMaterial.objects.select_related("material").order_by("-create_datetime")
 
         if material_filter:
             queryset = queryset.filter(material_id=material_filter)
         if version_filter:
             queryset = queryset.filter(version=version_filter)
+        if search_filter:
+            queryset = queryset.filter(
+                Q(material__code__icontains=search_filter)
+                | Q(material__name__icontains=search_filter)
+                | Q(version__icontains=search_filter)
+            )
 
         total = queryset.count()
         start = (page - 1) * limit
@@ -392,12 +423,12 @@ class BOMDetailViewSet(viewsets.ViewSet):
         except Material.DoesNotExist:
             return ErrorResponse(msg="物料不存在", status=status.HTTP_400_BAD_REQUEST)
 
-        sub_bom = None
-        if sub_bom_id:
-            try:
-                sub_bom = BillOfMaterial.objects.get(id=sub_bom_id)
-            except BillOfMaterial.DoesNotExist:
-                return ErrorResponse(msg="子物料清单不存在", status=status.HTTP_400_BAD_REQUEST)
+        if bom.material_id and bom.material_id == material_id:
+            return ErrorResponse(msg="子物料不能与当前 BOM 所属物料相同", status=status.HTTP_400_BAD_REQUEST)
+
+        sub_bom, sub_bom_error = _resolve_detail_sub_bom(material, sub_bom_id)
+        if sub_bom_error:
+            return ErrorResponse(msg=sub_bom_error, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             detail = BOMDetail.objects.create(

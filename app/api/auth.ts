@@ -255,6 +255,17 @@ const authApi = {
         dept: data.dept
       }
     }) as Promise<MesApiEnvelope<UserProfile>>
+  },
+
+  /**
+   * 管理员删除指定用户
+   * @param id - 用户 ID
+   */
+  deleteUser(id: number): Promise<MesApiEnvelope<null>> {
+    return request({
+      url: `/api/auth/users/${id}/`,
+      method: 'DELETE'
+    }) as Promise<MesApiEnvelope<null>>
   }
 }
 

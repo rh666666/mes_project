@@ -36,6 +36,12 @@ export interface DispatchOrderDispatchBody {
   device?: number
 }
 
+/** 员工抢单请求体 POST .../grab/ */
+export interface DispatchOrderGrabBody {
+  /** 抢单数量；不传则抢剩余可生产数量 */
+  quantity?: number
+}
+
 /** 拆分请求体 POST .../split/ */
 export interface DispatchOrderSplitBody {
   split_quantity: number
@@ -138,12 +144,20 @@ const dispatchOrderApi = {
   /**
    * 员工抢单
    * @param id - 派工单 ID
+   * @param data - 可选抢单数量（小于剩余数量时后端拆分子工单）
    */
-  grabDispatchOrder(id: number): Promise<MesApiEnvelope<DispatchOrder>> {
+  grabDispatchOrder(
+    id: number,
+    data: DispatchOrderGrabBody = {}
+  ): Promise<MesApiEnvelope<DispatchOrder>> {
+    const payload: Record<string, unknown> = {}
+    if (data.quantity !== undefined && data.quantity !== null) {
+      payload.quantity = data.quantity
+    }
     return request({
       url: `/api/mes/dispatch-orders/${id}/grab/`,
       method: 'POST',
-      data: {}
+      data: payload
     }) as Promise<MesApiEnvelope<DispatchOrder>>
   },
 

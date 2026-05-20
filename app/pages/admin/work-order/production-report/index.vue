@@ -24,15 +24,17 @@
           v-for="item in reportList"
           :key="item.id"
           :title="item.code || `报工 ${item.id}`"
-          :label="cellLabel(item)"
           clickable
           @click="onRowClick(item)"
         >
-          <template #value>
-            <view class="cell-right">
-              <text class="qty-text">{{ item.quantity != null ? item.quantity : '-' }}</text>
-              <wd-icon name="arrow-right" size="16" color="#969799" />
+          <template #label>
+            <view class="cell-multiline-label">
+              <text class="cell-label-line">{{ cellLabelLine1(item) }}</text>
+              <text class="cell-label-line cell-label-line--sub">{{ cellLabelLine2(item) }}</text>
             </view>
+          </template>
+          <template #value>
+            <wd-icon name="arrow-right" size="16" color="#969799" />
           </template>
         </wd-cell>
       </wd-cell-group>
@@ -146,16 +148,25 @@ export default {
     },
 
     /**
-     * 列表项副标题
+     * 副标题第一行：派工单号、工序名称
      * @param {Object} item - 报工行
      * @returns {string}
      */
-    cellLabel(item) {
+    cellLabelLine1(item) {
       const dispatch = item.dispatch_order_code || '-'
       const proc = item.process_name || '-'
+      return `${dispatch}  ${proc}`
+    },
+
+    /**
+     * 副标题第二行：数量、日期
+     * @param {Object} item - 报工行
+     * @returns {string}
+     */
+    cellLabelLine2(item) {
       const qty = item.quantity != null ? item.quantity : '-'
       const date = item.report_date || '-'
-      return `${dispatch}  ${proc}  数量 ${qty}  日期 ${date}`
+      return `数量 ${qty}  日期 ${date}`
     },
 
     /**
@@ -285,15 +296,21 @@ export default {
   overflow-y: auto;
 }
 
-.cell-right {
+.cell-multiline-label {
   display: flex;
-  align-items: center;
-  gap: 12rpx;
+  flex-direction: column;
+  gap: 8rpx;
 }
 
-.qty-text {
-  font-size: 28rpx;
+.cell-label-line {
+  font-size: 24rpx;
   color: $uni-text-color-grey;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.cell-label-line--sub {
+  font-size: 22rpx;
 }
 
 .loading-overlay {

@@ -7,11 +7,129 @@ from django.db import models, transaction
 from system.models import CoreModel
 from utils import generate_date_sequence_code
 
+from .bom import BillOfMaterial
 from .devices import Device
 from .materials import Material
-from .processes import Process
+from .processes import Process, ProcessRoute
 
 logger = logging.getLogger(__name__)
+
+
+def _build_route_output_bom_map(process_route: ProcessRoute) -> dict[int, BillOfMaterial]:
+    """构建工艺路线「产出物料 -> 工序 BOM」映射。
+
+    每个节点的 process_bom.material 表示该工序产出物，对应该工序绑定的 BOM。
+
+    Args:
+        process_route: 工艺路线实例
+
+    Returns:
+        dict: {产出物料 ID: BillOfMaterial}
+    """
+    mapping: dict[int, BillOfMaterial] = {}
+    nodes = process_route.nodes.select_related("process_bom", "process_bom__material")
+    for node in nodes:
+        bom = node.process_bom
+        if bom and bom.material_id:
+            mapping[bom.material_id] = bom
+    return mapping
+
+
+def _get_terminal_product_bom(process_route: ProcessRoute, product_id: int) -> BillOfMaterial | None:
+    """获取末序节点上、产出为成品的 BOM。
+
+    末序指工艺路线图中无出边的节点；成品 BOM 应绑定在末序且 BOM 所属物料为任务单产品。
+
+    Args:
+        process_route: 工艺路线实例
+        product_id: 成品物料 ID
+
+    Returns:
+        BillOfMaterial | None: 末序成品 BOM，无法解析时返回 None
+    """
+    nodes = list(process_route.nodes.select_related("process_bom", "process_bom__material"))
+    if not nodes:
+        return None
+
+    from_node_ids = set(process_route.edges.values_list("from_node_id", flat=True))
+    sink_nodes = [node for node in nodes if node.id not in from_node_ids]
+    if not sink_nodes:
+        sink_nodes = nodes
+
+    for node in sink_nodes:
+        bom = node.process_bom
+        if bom and bom.material_id == product_id:
+            return bom
+
+    for node in sink_nodes:
+        if node.process_bom_id:
+            logger.warning(
+                "工艺路线 %s 末序 BOM 物料与产品不一致，回退使用首个末序 BOM",
+                process_route.id,
+            )
+            return node.process_bom
+
+    return None
+
+
+def _explode_bom_to_leaf_requirements(
+    output_quantity: int,
+    bom: BillOfMaterial,
+    material_to_bom: dict[int, BillOfMaterial],
+    requirements: dict[int, dict[str, Any]],
+    visited_output_materials: set[int] | None = None,
+) -> None:
+    """将指定产出数量按 BOM 向下展开，仅累加叶子物料需求。
+
+    子项若在本工艺路线中有对应产出 BOM，则继续展开；否则若明细配置了 sub_bom 则展开子 BOM；
+    否则视为叶子物料。
+
+    Args:
+        output_quantity: 待产出的 BOM 所属物料数量
+        bom: 当前层级 BOM
+        material_to_bom: 路线产出物料到 BOM 的映射
+        requirements: 叶子物料累加器，就地修改
+        visited_output_materials: 已访问的产出物料 ID，用于环检测
+    """
+    if output_quantity <= 0 or not bom:
+        return
+
+    visited = set(visited_output_materials or [])
+    output_material_id = bom.material_id
+    if output_material_id:
+        if output_material_id in visited:
+            logger.warning("BOM 展开检测到环，物料 ID=%s", output_material_id)
+            return
+        visited.add(output_material_id)
+
+    details = bom.bom_details.select_related("material", "sub_bom").all()
+    for detail in details:
+        if not detail.material_id:
+            continue
+        needed_qty = output_quantity * detail.quantity
+        child_route_bom = material_to_bom.get(detail.material_id)
+        if child_route_bom:
+            _explode_bom_to_leaf_requirements(
+                needed_qty,
+                child_route_bom,
+                material_to_bom,
+                requirements,
+                visited,
+            )
+        elif detail.sub_bom_id:
+            _explode_bom_to_leaf_requirements(
+                needed_qty,
+                detail.sub_bom,
+                material_to_bom,
+                requirements,
+                visited,
+            )
+        else:
+            material = detail.material
+            mid = material.id
+            if mid not in requirements:
+                requirements[mid] = {"material": material, "quantity": 0}
+            requirements[mid]["quantity"] += int(needed_qty)
 
 
 class ProductionOrder(CoreModel):
@@ -48,25 +166,30 @@ class ProductionOrder(CoreModel):
         super().save(*args, **kwargs)
 
     def calculate_material_requirements(self) -> dict:
-        """计算所需原材料数量
+        """计算所需原材料数量（仅叶子物料）。
+
+        从工艺路线末序绑定的成品 BOM 出发，按生产数量向下展开；中间产物通过
+        前序工序绑定的 BOM 继续展开，直至无对应产出 BOM 的物料作为叶子节点累加。
 
         Returns:
             dict: {material_id: {material: Material, quantity: int}}
         """
-        ordered_nodes = self.process_route.get_topological_nodes()
-        first_node = ordered_nodes[0][0] if ordered_nodes else None
-        if not first_node or not first_node.process_bom:
+        route = self.process_route
+        if not route or not self.product_id:
             return {}
-        
-        requirements = {}
-        for detail in first_node.process_bom.bom_details.all():
-            material = detail.material
-            # quantity 表示生产1个产品需要多少个该原料
-            required_qty = self.quantity * detail.quantity
-            requirements[material.id] = {
-                'material': material,
-                'quantity': int(required_qty)
-            }
+
+        terminal_bom = _get_terminal_product_bom(route, self.product_id)
+        if not terminal_bom:
+            return {}
+
+        material_to_bom = _build_route_output_bom_map(route)
+        requirements: dict[int, dict[str, Any]] = {}
+        _explode_bom_to_leaf_requirements(
+            self.quantity,
+            terminal_bom,
+            material_to_bom,
+            requirements,
+        )
         return requirements
 
     def publish(self) -> list:
@@ -144,7 +267,7 @@ class DispatchOrder(CoreModel):
         PAUSED = "paused", "已暂停"  # 员工手动暂停生产后，状态变更为已暂停
         WAITING_PREVIOUS = "waiting_previous", "等待前置工序"  # 等待前一工序产出
         CANCELLED = "cancelled", "已取消"  # 员工不可取消派工单，由管理员手动取消
-        COMPLETED = "completed", "已完成"  # 生产完成（报工数量等于生产数量）
+        COMPLETED = "completed", "已完成"  # 生产完成（累计报工数量达到或超过计划数量）
         OBSOLETE = "obsolete", "已废弃"  # 数据异常时（如工序被删除，或父级任务单被删除等），派工单将自动废弃，使用信号处理机制实现
 
     code = models.CharField(max_length=100, unique=True, verbose_name="工序派工单编码")
@@ -237,12 +360,41 @@ class DispatchOrder(CoreModel):
             
             return child_order
 
+    def peel_remainder_to_pending_child(self) -> 'DispatchOrder | None':
+        """将父工单剩余可生产数量拆为待抢子工单。
+
+        用于部分抢单/派工后，使余量仍以子工单形式出现在抢单中心。
+
+        Returns:
+            DispatchOrder | None: 新建的待抢子工单；无剩余可生产数量时返回 None
+        """
+        peel_qty = self.quantity - self.completed_quantity
+        if peel_qty < 1:
+            return None
+
+        child_order = DispatchOrder.objects.create(
+            production_order=self.production_order,
+            process=self.process,
+            sequence=self.sequence,
+            quantity=peel_qty,
+            status=self.Status.PENDING,
+            parent=self,
+            is_child=True,
+        )
+        self.quantity = self.completed_quantity
+        self.is_parent = True
+        self.save()
+        return child_order
+
     def report(
         self,
         report_quantity: int,
         work_time: datetime.timedelta | None = None,
     ) -> 'ProductionReport':
         """生产报工
+
+        允许累计报工数量超过计划生产数量（溢出报工）；达到或超过计划数量时标记为已完成，
+        已完成数量保留实际报工累计值。
 
         Args:
             report_quantity: 报工数量
@@ -255,11 +407,6 @@ class DispatchOrder(CoreModel):
             work_time = datetime.timedelta(0)
 
         with transaction.atomic():
-            # 验证报工数量
-            remaining = self.quantity - self.completed_quantity
-            if report_quantity > remaining:
-                raise ValueError("报工数量不能超过剩余生产数量")
-
             # 创建报工记录（编号在 ProductionReport.save 中自动生成）
             report = ProductionReport.objects.create(
                 dispatch_order=self,
@@ -270,10 +417,9 @@ class DispatchOrder(CoreModel):
             # 更新已完成数量
             self.completed_quantity += report_quantity
             
-            # 检查是否完成
+            # 达到或超过计划数量时标记完成（不截断已完成数量）
             if self.completed_quantity >= self.quantity:
                 self.status = self.Status.COMPLETED
-                self.completed_quantity = self.quantity
             
             self.save()
             

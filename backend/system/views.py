@@ -19,6 +19,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from utils import DetailResponse, ErrorResponse, ErrorResponseSerializer, SuccessResponse
 
+from mes.models import DispatchOrder
+
 from .models import Dept
 from .serializers import (
     AvatarUploadRequestSerializer,
@@ -36,6 +38,7 @@ from .serializers import (
     RegisterRequestSerializer,
     RegisterResponseSerializer,
     UserAdminUpdateRequestSerializer,
+    UserDeleteResponseSerializer,
     UserListRequestSerializer,
     UserListResponseSerializer,
     UserProfileResponseSerializer,
@@ -459,7 +462,7 @@ class UserViewSet(viewsets.ViewSet):
 
     def get_permissions(self):
         """根据操作类型返回不同的权限类"""
-        if self.action in ["list", "admin_update"]:
+        if self.action in ["list", "admin_update", "destroy"]:
             return [IsAdmin()]
         return [IsAuthenticated()]
 
@@ -668,4 +671,63 @@ class UserViewSet(viewsets.ViewSet):
             return ErrorResponse(msg=str(e), status=status.HTTP_400_BAD_REQUEST)
 
         return DetailResponse(data=UserSerializer(user).data)
+
+    @extend_schema(
+        summary="删除用户",
+        description="管理员删除指定用户账号",
+        responses={
+            200: OpenApiResponse(response=UserDeleteResponseSerializer, description="删除成功"),
+            400: OpenApiResponse(response=ErrorResponseSerializer, description="删除失败，用户存在未完成派工单或为唯一管理员"),
+            403: OpenApiResponse(response=ErrorResponseSerializer, description="无权限"),
+            404: OpenApiResponse(response=ErrorResponseSerializer, description="用户不存在"),
+        },
+        tags=["用户"],
+    )
+    @transaction.atomic
+    def destroy(self, request: Request, pk: int) -> Response:
+        """删除用户
+
+        Args:
+            request: 请求对象
+            pk: 用户 ID
+
+        Returns:
+            Response: 删除结果
+        """
+        User = get_user_model()
+
+        if request.user.id == pk:
+            return ErrorResponse(msg="不能删除当前登录账号", status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(id=pk)
+        except User.DoesNotExist:
+            return ErrorResponse(msg="用户不存在", status=status.HTTP_404_NOT_FOUND)
+
+        if user.is_superuser:
+            return ErrorResponse(msg="不能删除超级管理员账号", status=status.HTTP_400_BAD_REQUEST)
+
+        if user.role == User.Role.ADMIN and User.objects.filter(role=User.Role.ADMIN).count() <= 1:
+            return ErrorResponse(msg="不能删除唯一的管理员账号", status=status.HTTP_400_BAD_REQUEST)
+
+        active_dispatch_statuses = [
+            DispatchOrder.Status.PENDING,
+            DispatchOrder.Status.DISPATCHED,
+            DispatchOrder.Status.GRABBED,
+            DispatchOrder.Status.IN_PROGRESS,
+            DispatchOrder.Status.PAUSED,
+            DispatchOrder.Status.WAITING_PREVIOUS,
+        ]
+        if DispatchOrder.objects.filter(operator_id=pk, status__in=active_dispatch_statuses).exists():
+            return ErrorResponse(msg="该用户存在未完成的工序派工单，无法删除", status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            username = user.username
+            user.delete()
+            logger.info("用户已删除: %s (ID: %s)", username, pk)
+        except Exception as e:
+            logger.error("删除用户 %s 失败: %s", pk, str(e))
+            return ErrorResponse(msg=str(e), status=status.HTTP_400_BAD_REQUEST)
+
+        return DetailResponse(data=None, msg="删除成功")
 

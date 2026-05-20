@@ -42,12 +42,12 @@
               @click="showMaterialSelector = true"
             />
             <wd-cell
-              title="子 BOM（可选）"
+              title="子物料 BOM"
               is-link
               value-align="left"
               title-width="33%"
               :value="selectedSubBomName"
-              @click="showSubBomSelector = true"
+              @click="onShowSubBomSelector"
             />
             <wd-input
               v-model="createForm.quantity"
@@ -84,11 +84,11 @@
       <SearchableSelector
         v-model="createForm.sub_bom"
         label=""
-        placeholder="搜索 BOM 版本"
-        search-key="version"
-        :fetch-api="bomApi.getBomList"
+        placeholder="搜索该子物料的 BOM 版本"
+        search-key="search"
+        :fetch-api="fetchSubBomListForMaterial"
         title-field="version"
-        subtitle-field="material_name"
+        subtitle-field="material_code"
         @select="onSubBomSelect"
       />
     </wd-popup>
@@ -223,9 +223,85 @@ export default {
      * 物料选择回调
      * @param {Object|null} material - 已选物料
      */
-    onMaterialSelect(material) {
+    async onMaterialSelect(material) {
       this.selectedMaterialLabel = material?.name || ''
+      this.createForm.sub_bom = null
+      this.selectedSubBomLabel = ''
       this.showMaterialSelector = false
+      await this.syncDefaultSubBom(material)
+    },
+
+    /**
+     * 打开子物料 BOM 选择器
+     */
+    onShowSubBomSelector() {
+      if (!this.createForm.material) {
+        uni.showToast({ title: '请先选择子物料', icon: 'none' })
+        return
+      }
+      this.showSubBomSelector = true
+    },
+
+    /**
+     * 拉取当前子物料名下的 BOM 列表
+     * @param {Object} params - 分页与搜索参数
+     * @returns {Promise<Object>}
+     */
+    fetchSubBomListForMaterial(params = {}) {
+      if (!this.createForm.material) {
+        return Promise.resolve({
+          code: 400,
+          msg: '请先选择子物料',
+          data: [],
+          total: 0
+        })
+      }
+      return bomApi.getBomList({
+        ...params,
+        material: this.createForm.material
+      })
+    },
+
+    /**
+     * 根据子物料同步默认子 BOM（优先启用版本）
+     * @param {Object|null} material - 已选子物料
+     * @returns {Promise<void>}
+     */
+    async syncDefaultSubBom(material) {
+      if (!material?.id) {
+        this.createForm.sub_bom = null
+        this.selectedSubBomLabel = '无 BOM（叶子物料）'
+        return
+      }
+      try {
+        const res = await bomApi.getBomList({ material: material.id, page: 1, limit: 20 })
+        if (res.code !== 2000 || !res.data?.length) {
+          this.createForm.sub_bom = null
+          this.selectedSubBomLabel = '无 BOM（叶子物料）'
+          return
+        }
+        const preferred = res.data.find((item) => item.is_active) || res.data[0]
+        this.createForm.sub_bom = preferred.id
+        this.selectedSubBomLabel = this.formatSubBomLabel(preferred)
+      } catch (error) {
+        console.error('加载子物料 BOM 失败:', error)
+        this.createForm.sub_bom = null
+        this.selectedSubBomLabel = ''
+      }
+    },
+
+    /**
+     * 格式化子 BOM 展示文案
+     * @param {Object|null} bom - BOM 记录
+     * @returns {string}
+     */
+    formatSubBomLabel(bom) {
+      if (!bom) {
+        return '无 BOM（叶子物料）'
+      }
+      const version = bom.version || '-'
+      const code = bom.material_code || bom.material_name || '-'
+      return `${version} (${code})`
     },
 
     /**
@@ -233,7 +309,12 @@ export default {
      * @param {Object|null} bom - 已选子 BOM
      */
     onSubBomSelect(bom) {
-      this.selectedSubBomLabel = bom ? `${bom.material_name || '-'} / ${bom.version || '-'}` : ''
+      if (bom && bom.material != null && bom.material !== this.createForm.material) {
+        uni.showToast({ title: '只能选择该子物料名下的 BOM', icon: 'none' })
+        return
+      }
+      this.selectedSubBomLabel = bom ? this.formatSubBomLabel(bom) : '无 BOM（叶子物料）'
+      this.createForm.sub_bom = bom?.id ?? null
       this.showSubBomSelector = false
     },
 
@@ -244,6 +325,10 @@ export default {
     async onCreateDetail() {
       if (!this.createForm.material) {
         uni.showToast({ title: '请选择子物料', icon: 'none' })
+        return
+      }
+      if (this.bomInfo.material && this.createForm.material === this.bomInfo.material) {
+        uni.showToast({ title: '子物料不能与当前 BOM 所属物料相同', icon: 'none' })
         return
       }
       const quantity = Number(this.createForm.quantity)

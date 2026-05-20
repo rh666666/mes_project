@@ -108,16 +108,18 @@
           <text class="popup-title">绑定工序 BOM</text>
           <wd-icon name="close" size="20" @click="showBomSelector = false" />
         </view>
-        <text class="bom-popup-tip">仅列出当前工艺路线物料下的 BOM，用于工序用料与任务单原材料核算。</text>
+        <text class="bom-popup-tip">
+          末序绑定成品 BOM（所属物料为路线成品）；前序各工序绑定对应中间产物 BOM（所属物料为该工序产出物）。任务单原材料自末序向下递归展开，仅统计叶子物料。
+        </text>
         <view class="popup-body">
           <SearchableSelector
             v-model="selectedBomId"
             label=""
-            placeholder="搜索 BOM 版本"
-            search-key="version"
+            placeholder="搜索物料名称、编码或 BOM 版本"
+            search-key="search"
             :fetch-api="fetchBomListForRoute"
             title-field="material_name"
-            subtitle-field="version"
+            subtitle-field="material_code"
             :required="false"
             @select="onBomSelect"
           />
@@ -975,23 +977,13 @@ export default {
     },
 
     /**
-     * 加载 BOM 列表（限定当前工艺路线关联物料）
+     * 加载可选 BOM 列表（不限于路线成品，支持中间产物 BOM）
      * @param {Object} params - 分页与搜索参数
      * @returns {Promise<Object>}
      */
     fetchBomListForRoute(params = {}) {
-      const mid = this.routeInfo.material
-      if (!mid) {
-        return Promise.resolve({
-          code: 400,
-          msg: '缺少工艺路线物料',
-          data: [],
-          total: 0
-        })
-      }
       return bomApi.getBomList({
-        ...params,
-        material: mid
+        ...params
       })
     },
 
@@ -1002,10 +994,6 @@ export default {
       const currentNode = this.graphData.nodes.find((n) => n.id === this.selectedNodeId)
       if (!currentNode || currentNode.id === 'root') {
         uni.showToast({ title: '请先选择工序节点', icon: 'none' })
-        return
-      }
-      if (!this.routeInfo.material) {
-        uni.showToast({ title: '路线物料信息缺失，无法筛选 BOM', icon: 'none' })
         return
       }
       this.editingNode = currentNode
@@ -1037,10 +1025,14 @@ export default {
       }
       const v = bom.version || ''
       const name = bom.material_name || ''
+      const code = bom.material_code || ''
+      if (v && name && code) {
+        return `${v} ${name} (${code})`
+      }
       if (v && name) {
         return `${v} ${name}`
       }
-      return v || name || ''
+      return v || name || code || ''
     },
 
     /**

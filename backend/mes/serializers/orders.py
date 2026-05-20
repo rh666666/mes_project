@@ -243,6 +243,46 @@ class DispatchOrderDetailResponseSerializer(DetailResponseSerializer):
     data = DispatchOrderSerializer(help_text="工序派工单详细信息")
 
 
+class DispatchOrderGrabRequestSerializer(serializers.Serializer):
+    """员工抢单请求序列化器"""
+
+    quantity = serializers.IntegerField(
+        required=False,
+        min_value=1,
+        help_text="抢单数量；不传则按剩余可生产数量全部抢单",
+    )
+
+    def validate(self, attrs: dict) -> dict:
+        """校验抢单数量不超过剩余可生产数量。
+
+        Args:
+            attrs: 请求字段
+
+        Returns:
+            dict: 含解析后的 quantity、remaining
+        """
+        dispatch_order = self.context.get("dispatch_order")
+        if not dispatch_order:
+            return attrs
+
+        remaining = dispatch_order.quantity - dispatch_order.completed_quantity
+        if remaining < 1:
+            raise serializers.ValidationError("该工单无可抢数量")
+
+        quantity = attrs.get("quantity") or remaining
+        if quantity > remaining:
+            raise serializers.ValidationError({"quantity": "抢单数量不能超过剩余生产数量"})
+        if quantity < remaining:
+            if remaining == 1:
+                raise serializers.ValidationError({"quantity": "剩余数量为1，须全部抢单"})
+            if dispatch_order.quantity == 1:
+                raise serializers.ValidationError({"quantity": "生产数量为1时不可部分抢单"})
+
+        attrs["quantity"] = quantity
+        attrs["remaining"] = remaining
+        return attrs
+
+
 class DispatchOrderSplitRequestSerializer(serializers.Serializer):
     """派工单拆分请求序列化器"""
 
@@ -281,21 +321,8 @@ class ProductionReportCreateRequestSerializer(serializers.Serializer):
     """生产报工创建请求序列化器"""
 
     dispatch_order_id = serializers.IntegerField(required=True, help_text="工序派工单ID")
-    quantity = serializers.IntegerField(min_value=1, required=True, help_text="报工数量")
+    quantity = serializers.IntegerField(min_value=1, required=True, help_text="报工数量（允许累计超过计划数量）")
     work_time = serializers.DurationField(required=True, help_text="工作时间")
-
-    def validate_quantity(self, value):
-        """验证报工数量"""
-        dispatch_order_id = self.initial_data.get('dispatch_order_id')
-        if dispatch_order_id:
-            try:
-                dispatch_order = DispatchOrder.objects.get(id=dispatch_order_id)
-                remaining = dispatch_order.quantity - dispatch_order.completed_quantity
-                if value > remaining:
-                    raise serializers.ValidationError("报工数量不能超过剩余生产数量")
-            except DispatchOrder.DoesNotExist as e:
-                raise serializers.ValidationError("工序派工单不存在") from e
-        return value
 
 
 class QualityCheckOrderListRequestSerializer(serializers.Serializer):

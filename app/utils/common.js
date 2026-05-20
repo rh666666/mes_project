@@ -23,6 +23,17 @@ export function clampApiListLimit(limit) {
 }
 
 /**
+ * 派工单剩余可生产数量（计划数量减已完成）
+ * @param {{ quantity?: number, completed_quantity?: number }|null|undefined} order - 派工单或列表行
+ * @returns {number}
+ */
+export function getDispatchRemainingQuantity(order) {
+  const qty = Number(order?.quantity) || 0
+  const completed = Number(order?.completed_quantity) || 0
+  return Math.max(0, qty - completed)
+}
+
+/**
  * 按标准分页响应（code / data 数组 / total）批量请求直至拉取全量数据。
  * 单页 limit 不超过 {@link API_LIST_LIMIT_MAX}，防止单次请求过大。
  *

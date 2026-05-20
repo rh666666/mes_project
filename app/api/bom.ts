@@ -30,6 +30,7 @@ export interface BomDetail {
   material_code: string
   material_name: string
   sub_bom: number | null
+  sub_bom_version?: string | null
   quantity: number
   create_datetime: string | null
 }
@@ -40,6 +41,8 @@ export interface GetBomListParams {
   limit?: number
   material?: number
   version?: string
+  /** 模糊搜索物料编码、名称或 BOM 版本 */
+  search?: string
 }
 
 /** 创建 BOM */

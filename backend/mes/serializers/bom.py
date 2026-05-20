@@ -51,6 +51,7 @@ class BOMDetailSerializer(serializers.ModelSerializer):
     bom_code = serializers.CharField(source="bom.material.code", read_only=True, help_text="物料清单编码")
     material_code = serializers.CharField(source="material.code", read_only=True, help_text="物料编码")
     material_name = serializers.CharField(source="material.name", read_only=True, help_text="物料名称")
+    sub_bom_version = serializers.CharField(source="sub_bom.version", read_only=True, allow_null=True, help_text="子物料 BOM 版本")
 
     class Meta:
         model = BOMDetail
@@ -62,6 +63,7 @@ class BOMDetailSerializer(serializers.ModelSerializer):
             "material_code",
             "material_name",
             "sub_bom",
+            "sub_bom_version",
             "quantity",
             "create_datetime",
         ]
@@ -135,6 +137,7 @@ class BillOfMaterialListRequestSerializer(serializers.Serializer):
     limit = serializers.IntegerField(required=False, default=10, min_value=1, max_value=100, help_text="每页数量")
     material = serializers.IntegerField(required=False, help_text="物料ID过滤")
     version = serializers.CharField(required=False, help_text="版本过滤")
+    search = serializers.CharField(required=False, help_text="搜索物料编码、名称或版本")
 
 
 @extend_schema_serializer(many=False)
@@ -189,7 +192,7 @@ class BOMDetailCreateRequestSerializer(serializers.Serializer):
 
     bom = serializers.IntegerField(required=True, help_text="物料清单ID")
     material = serializers.IntegerField(required=True, help_text="物料ID")
-    sub_bom = serializers.IntegerField(required=False, help_text="子物料清单ID")
+    sub_bom = serializers.IntegerField(required=False, allow_null=True, help_text="子物料清单ID（须为子物料名下的 BOM）")
     quantity = serializers.IntegerField(required=True, min_value=1, help_text="数量")
 
 

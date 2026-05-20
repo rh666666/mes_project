@@ -33,7 +33,7 @@
         />
       </wd-cell-group>
       <view v-else class="empty-hint">
-        <text class="hint-text">暂无原材料需求数据（首道工序未配置 BOM 时为空）</text>
+        <text class="hint-text">暂无原材料需求数据（末序未配置成品 BOM 或路线不完整时为空）</text>
       </view>
     </view>
 

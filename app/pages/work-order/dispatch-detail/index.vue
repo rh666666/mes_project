@@ -23,7 +23,7 @@
           size="large"
           block
           :loading="actionLoading === 'grab'"
-          @click="onGrab"
+          @click="onOpenGrab"
         >
           抢单
         </wd-button>
@@ -35,7 +35,7 @@
           :loading="actionLoading === 'start'"
           @click="onStart"
         >
-          开始生产
+          {{ startButtonText }}
         </wd-button>
         <wd-button
           v-if="canPause"
@@ -67,7 +67,13 @@
     </view>
     <wd-status-tip v-else image="search" :tip="loadError" />
 
-    <wd-popup v-model="showReportPopup" position="bottom" :safe-area-inset-bottom="true">
+    <wd-popup
+      v-if="order"
+      v-model="showReportPopup"
+      position="bottom"
+      :safe-area-inset-bottom="true"
+      :root-portal="false"
+    >
       <view class="popup-sheet">
         <view class="popup-header">
           <text class="popup-title">生产报工</text>
@@ -90,14 +96,50 @@
         </view>
       </view>
     </wd-popup>
+
+    <wd-popup
+      v-if="order"
+      v-model="showGrabPopup"
+      position="bottom"
+      :safe-area-inset-bottom="true"
+      :root-portal="false"
+    >
+      <view class="popup-sheet">
+        <view class="popup-header">
+          <text class="popup-title">抢单</text>
+          <wd-icon name="close" size="20" @click="showGrabPopup = false" />
+        </view>
+        <view class="popup-body">
+          <text class="popup-hint">剩余可抢数量：{{ grabRemaining }}</text>
+          <wd-input
+            v-model="grabForm.quantity"
+            type="number"
+            label="抢单数量"
+            :placeholder="`1 ~ ${grabRemaining}`"
+          />
+        </view>
+        <view class="popup-footer">
+          <wd-button
+            type="primary"
+            size="large"
+            block
+            :loading="actionLoading === 'grab'"
+            @click="onConfirmGrab"
+          >
+            确认抢单
+          </wd-button>
+        </view>
+      </view>
+    </wd-popup>
   </view>
 </template>
 
 <script>
 import dispatchOrderApi from '@/api/dispatch-order'
 import productionReportApi from '@/api/production-report'
-import { clampApiListLimit } from '@/utils/common.js'
+import { clampApiListLimit, getDispatchRemainingQuantity } from '@/utils/common.js'
 import { formatDateTime } from '@/utils/format.js'
+import { showToastDeferred, waitAnimationFrames } from '@/utils/loading.js'
 
 /**
  * 工序派工单详情（员工）
@@ -116,6 +158,12 @@ export default {
       actionLoading: '',
       /** @type {boolean} 报工弹层 */
       showReportPopup: false,
+      /** @type {boolean} 抢单弹层 */
+      showGrabPopup: false,
+      /** @type {{quantity: string}} 抢单表单 */
+      grabForm: {
+        quantity: ''
+      },
       /** @type {{quantity: string, work_time: string}} 报工表单 */
       reportForm: {
         quantity: '',
@@ -171,12 +219,30 @@ export default {
     },
 
     /**
-     * 是否可报工
+     * 是否可报工（仅生产中：开工后且未暂停）
      * @returns {boolean}
      */
     canReport() {
-      if (!this.order) return false
-      return ['in_progress', 'grabbed'].includes(this.order.status)
+      return Boolean(this.order && this.order.status === 'in_progress')
+    },
+
+    /**
+     * 开始生产按钮文案（暂停后展示为恢复生产）
+     * @returns {string}
+     */
+    startButtonText() {
+      if (this.order && this.order.status === 'paused') {
+        return '恢复生产'
+      }
+      return '开始生产'
+    },
+
+    /**
+     * 剩余可抢数量
+     * @returns {number}
+     */
+    grabRemaining() {
+      return getDispatchRemainingQuantity(this.order)
     }
   },
 
@@ -212,17 +278,67 @@ export default {
     },
 
     /**
-     * 抢单
+     * 打开抢单弹层（剩余为 1 时直接抢单）
+     */
+    onOpenGrab() {
+      if (!this.orderId || !this.canGrab) {
+        return
+      }
+      const remaining = this.grabRemaining
+      if (remaining < 1) {
+        uni.showToast({ title: '该工单无可抢数量', icon: 'none' })
+        return
+      }
+      if (remaining === 1) {
+        this.submitGrab(1, false)
+        return
+      }
+      this.grabForm = { quantity: String(remaining) }
+      this.showGrabPopup = true
+    },
+
+    /**
+     * 确认抢单
      * @returns {Promise<void>}
      */
-    async onGrab() {
-      if (!this.orderId || !this.canGrab) return
+    async onConfirmGrab() {
+      const remaining = this.grabRemaining
+      const quantity = parseInt(String(this.grabForm.quantity).trim(), 10)
+      if (Number.isNaN(quantity) || quantity < 1) {
+        uni.showToast({ title: '请输入有效的抢单数量', icon: 'none' })
+        return
+      }
+      if (quantity > remaining) {
+        uni.showToast({ title: `抢单数量不能超过 ${remaining}`, icon: 'none' })
+        return
+      }
+      await this.submitGrab(quantity, true)
+    },
+
+    /**
+     * 提交抢单
+     * @param {number} quantity - 抢单数量
+     * @param {boolean} fromPopup - 是否来自弹层（用于成功后关闭弹层）
+     * @returns {Promise<void>}
+     */
+    async submitGrab(quantity, fromPopup) {
+      if (!this.orderId || !this.canGrab) {
+        return
+      }
+      const remaining = this.grabRemaining
+      const payload = quantity < remaining ? { quantity } : {}
+
       this.actionLoading = 'grab'
       try {
-        const res = await dispatchOrderApi.grabDispatchOrder(this.orderId)
+        const res = await dispatchOrderApi.grabDispatchOrder(this.orderId, payload)
         if (res.code === 2000) {
-          uni.showToast({ title: res.msg || '抢单成功', icon: 'success' })
-          await this.loadAll()
+          const grabbed = res.data
+          if (grabbed && grabbed.id && grabbed.id !== this.orderId) {
+            this.orderId = grabbed.id
+          }
+          await this.finishActionSuccess(res.msg || '抢单成功', {
+            closeGrabPopup: fromPopup
+          })
           return
         }
         uni.showToast({ title: res.msg || '抢单失败', icon: 'none' })
@@ -230,7 +346,9 @@ export default {
         console.error('抢单失败:', error)
         uni.showToast({ title: error.msg || '抢单失败', icon: 'none' })
       } finally {
-        this.actionLoading = ''
+        if (this.actionLoading === 'grab') {
+          this.actionLoading = ''
+        }
       }
     },
 
@@ -244,8 +362,7 @@ export default {
       try {
         const res = await dispatchOrderApi.startDispatchOrder(this.orderId)
         if (res.code === 2000) {
-          uni.showToast({ title: res.msg || '已开始生产', icon: 'success' })
-          await this.loadAll()
+          await this.finishActionSuccess(res.msg || '已开始生产')
           return
         }
         uni.showToast({ title: res.msg || '操作失败', icon: 'none' })
@@ -253,7 +370,9 @@ export default {
         console.error('开始生产失败:', error)
         uni.showToast({ title: error.msg || '操作失败', icon: 'none' })
       } finally {
-        this.actionLoading = ''
+        if (this.actionLoading === 'start') {
+          this.actionLoading = ''
+        }
       }
     },
 
@@ -267,8 +386,7 @@ export default {
       try {
         const res = await dispatchOrderApi.pauseDispatchOrder(this.orderId)
         if (res.code === 2000) {
-          uni.showToast({ title: res.msg || '已暂停', icon: 'success' })
-          await this.loadAll()
+          await this.finishActionSuccess(res.msg || '已暂停')
           return
         }
         uni.showToast({ title: res.msg || '操作失败', icon: 'none' })
@@ -276,14 +394,40 @@ export default {
         console.error('暂停生产失败:', error)
         uni.showToast({ title: error.msg || '操作失败', icon: 'none' })
       } finally {
-        this.actionLoading = ''
+        if (this.actionLoading === 'pause') {
+          this.actionLoading = ''
+        }
       }
+    },
+
+    /**
+     * 操作成功后先刷新页面再延迟 Toast，避免按钮区重绘与 uni.showToast 冲突
+     * @param {string} message - 成功提示文案
+     * @param {{ closeReportPopup?: boolean, closeGrabPopup?: boolean }} [options] - 可选：是否关闭弹层
+     * @returns {Promise<void>}
+     */
+    async finishActionSuccess(message, options = {}) {
+      if (options.closeReportPopup) {
+        this.showReportPopup = false
+      }
+      if (options.closeGrabPopup) {
+        this.showGrabPopup = false
+      }
+      await this.$nextTick()
+      await this.loadAll()
+      this.actionLoading = ''
+      await this.$nextTick()
+      await waitAnimationFrames(2)
+      showToastDeferred({ title: message, icon: 'success' }, 250)
     },
 
     /**
      * 打开报工弹层
      */
     onOpenReport() {
+      if (!this.canReport) {
+        return
+      }
       this.reportForm = { quantity: '', work_time: '01:00:00' }
       this.showReportPopup = true
     },
@@ -313,9 +457,7 @@ export default {
           work_time: workTime
         })
         if (res.code === 2000) {
-          uni.showToast({ title: res.msg || '报工成功', icon: 'success' })
-          this.showReportPopup = false
-          await this.loadAll()
+          await this.finishActionSuccess(res.msg || '报工成功', { closeReportPopup: true })
           return
         }
         uni.showToast({ title: res.msg || '报工失败', icon: 'none' })
@@ -323,7 +465,9 @@ export default {
         console.error('报工失败:', error)
         uni.showToast({ title: error.msg || '报工失败', icon: 'none' })
       } finally {
-        this.actionLoading = ''
+        if (this.actionLoading === 'report') {
+          this.actionLoading = ''
+        }
       }
     },
 
@@ -433,6 +577,13 @@ export default {
 
 .popup-body {
   padding: 24rpx 32rpx;
+}
+
+.popup-hint {
+  display: block;
+  margin-bottom: 16rpx;
+  font-size: 26rpx;
+  color: $uni-text-color-grey;
 }
 
 .popup-footer {

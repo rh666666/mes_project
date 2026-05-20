@@ -227,6 +227,12 @@ class UserAdminUpdateRequestSerializer(serializers.Serializer):
     dept = serializers.IntegerField(required=False, help_text="数据归属部门 ID")
 
 
+class UserDeleteResponseSerializer(DetailResponseSerializer):
+    """用户删除响应序列化器"""
+
+    data = serializers.CharField(help_text="响应数据", allow_null=True)
+
+
 class UserListRequestSerializer(serializers.Serializer):
     """用户列表请求序列化器"""
 

@@ -17,8 +17,8 @@
             <text class="value">{{ item.quantity }}</text>
           </view>
           <view class="detail-row">
-            <text class="label">子 BOM</text>
-            <text class="value">{{ item.sub_bom || '-' }}</text>
+            <text class="label">子物料 BOM</text>
+            <text class="value">{{ formatSubBomDisplay(item) }}</text>
           </view>
           <view class="detail-actions">
             <wd-button size="small" type="danger" plain @click="$emit('delete', item)">删除</wd-button>
@@ -57,6 +57,22 @@ export default {
     return {
       /** @type {Array<string>} 当前展开项 */
       activeNames: []
+    }
+  },
+
+  methods: {
+    /**
+     * 子物料 BOM 展示文案
+     * @param {Object} item - 详情项
+     * @returns {string}
+     */
+    formatSubBomDisplay(item) {
+      if (!item?.sub_bom) {
+        return '无（叶子物料）'
+      }
+      const version = item.sub_bom_version || '-'
+      const code = item.material_code || item.material_name || '-'
+      return `${version} (${code})`
     }
   },
 

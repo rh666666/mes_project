@@ -1,15 +1,20 @@
 <template>
   <view class="page">
     <view class="filter-section">
-      <wd-picker
-        v-model="filterStatus"
-        placeholder="状态"
-        :columns="statusColumns"
-        @confirm="onFilterChange"
-      />
+      <view class="status-filter">
+        <wd-tabs v-model="selectedStatus">
+          <wd-tab title="全部" name="all" />
+          <wd-tab
+            v-for="status in statusOptions"
+            :key="status.value"
+            :title="status.label"
+            :name="status.value"
+          />
+        </wd-tabs>
+      </view>
       <view v-if="!isLoading" class="results-stats">
         <text class="stats-text">已加载 {{ orderList.length }} / 共 {{ total }} 条</text>
-        <wd-tag v-if="filterStatus !== ''" type="primary" size="small">已筛选</wd-tag>
+        <wd-tag v-if="selectedStatus && selectedStatus !== 'all'" type="primary" size="small">已筛选</wd-tag>
       </view>
     </view>
 
@@ -22,23 +27,36 @@
       @scrolltolower="onLoadMore"
       @scroll="onScroll"
     >
-      <wd-cell-group>
-        <wd-cell
+      <view class="order-cards">
+        <view
           v-for="item in orderList"
           :key="item.id"
-          :title="item.code || `派工单 ${item.id}`"
-          :label="cellLabel(item)"
-          clickable
+          class="order-card"
           @click="onRowClick(item)"
         >
-          <template #value>
-            <view class="cell-right">
+          <view class="order-card__header">
+            <text class="order-card__code">{{ item.code || `派工单 ${item.id}` }}</text>
+            <view class="order-card__header-right">
               <wd-tag size="small" type="primary">{{ item.status_display || item.status }}</wd-tag>
               <wd-icon name="arrow-right" size="16" color="#969799" />
             </view>
-          </template>
-        </wd-cell>
-      </wd-cell-group>
+          </view>
+          <view class="order-card__table">
+            <view class="order-card__row">
+              <text class="order-card__label">生产任务单</text>
+              <text class="order-card__value">{{ item.production_order_code || '-' }}</text>
+            </view>
+            <view class="order-card__row">
+              <text class="order-card__label">工序</text>
+              <text class="order-card__value">{{ item.process_name || '-' }}</text>
+            </view>
+            <view class="order-card__row">
+              <text class="order-card__label">完成进度</text>
+              <text class="order-card__value order-card__value--emphasis">{{ formatProgress(item) }}</text>
+            </view>
+          </view>
+        </view>
+      </view>
 
       <wd-loadmore :state="loadMoreState" />
 
@@ -57,7 +75,7 @@ import { clampApiListLimit } from '@/utils/common.js'
 
 /**
  * 我的工单
- * @description 展示当前用户接取的工序派工单，支持按状态筛选
+ * @description 展示当前用户接取的工序派工单，支持按状态筛选（卡片表格化布局）
  */
 export default {
   data() {
@@ -80,30 +98,23 @@ export default {
       hasMore: true,
       /** @type {number} 滚动位置 */
       scrollTop: 0,
-      /** @type {string} 状态筛选 */
-      filterStatus: '',
-      /** @type {boolean} 是否首次加载 */
-      isFirstLoad: true
-    }
-  },
-
-  computed: {
-    /**
-     * 状态筛选项（不含待抢单）
-     * @returns {Array<{value:string,label:string}>}
-     */
-    statusColumns() {
-      return [
-        { value: '', label: '全部状态' },
+      /** @type {string} 选中的状态筛选 */
+      selectedStatus: 'all',
+      /** @type {Array<{value:string,label:string}>} 状态选项（不含待抢单） */
+      statusOptions: [
         { value: 'dispatched', label: '已派工' },
         { value: 'grabbed', label: '已抢单' },
         { value: 'in_progress', label: '生产中' },
         { value: 'paused', label: '已暂停' },
         { value: 'waiting_previous', label: '等待前置工序' },
         { value: 'completed', label: '已完成' }
-      ]
-    },
+      ],
+      /** @type {boolean} 是否首次加载 */
+      isFirstLoad: true
+    }
+  },
 
+  computed: {
     /**
      * 加载更多状态
      * @returns {string}
@@ -112,6 +123,19 @@ export default {
       if (this.isLoadingMore) return 'loading'
       if (!this.hasMore && this.orderList.length > 0) return 'finished'
       return 'default'
+    }
+  },
+
+  watch: {
+    /**
+     * 监听状态 Tab 切换并重新加载列表
+     * @param {string} newVal - 新状态
+     * @param {string} oldVal - 旧状态
+     */
+    selectedStatus(newVal, oldVal) {
+      if (newVal !== oldVal) {
+        this.loadOrderList(false)
+      }
     }
   },
 
@@ -128,16 +152,14 @@ export default {
 
   methods: {
     /**
-     * 列表项副标题
+     * 格式化完成进度
      * @param {Object} item - 派工单行
      * @returns {string}
      */
-    cellLabel(item) {
-      const po = item.production_order_code || '-'
-      const proc = item.process_name || '-'
+    formatProgress(item) {
       const done = item.completed_quantity != null ? item.completed_quantity : 0
       const qty = item.quantity != null ? item.quantity : '-'
-      return `${po}  ${proc}  进度 ${done}/${qty}`
+      return `${done}/${qty}`
     },
 
     /**
@@ -160,8 +182,8 @@ export default {
           limit: clampApiListLimit(this.pageSize),
           mine: true
         }
-        if (this.filterStatus !== '') {
-          params.status = this.filterStatus
+        if (this.selectedStatus && this.selectedStatus !== 'all') {
+          params.status = this.selectedStatus
         }
 
         const res = await dispatchOrderApi.getDispatchOrderList(params)
@@ -181,13 +203,6 @@ export default {
         this.isRefreshing = false
         this.isLoadingMore = false
       }
-    },
-
-    /**
-     * 筛选变更后重新加载
-     */
-    onFilterChange() {
-      this.loadOrderList(false)
     },
 
     /**
@@ -247,6 +262,10 @@ export default {
   border-bottom: 1px solid $uni-border-color;
 }
 
+.status-filter {
+  margin-top: 0;
+}
+
 .results-stats {
   display: flex;
   align-items: center;
@@ -266,10 +285,77 @@ export default {
   overflow-y: auto;
 }
 
-.cell-right {
+.order-cards {
+  padding: 24rpx;
   display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.order-card {
+  padding: 24rpx;
+  border-radius: 16rpx;
+  background-color: $uni-bg-color-white;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+}
+
+.order-card__header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20rpx;
+  padding-bottom: 16rpx;
+  border-bottom: 1px solid $uni-border-color;
+}
+
+.order-card__header-right {
+  display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 12rpx;
+}
+
+.order-card__code {
+  flex: 1;
+  min-width: 0;
+  font-size: 30rpx;
+  font-weight: 500;
+  color: $uni-text-color;
+  word-break: break-all;
+}
+
+.order-card__table {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.order-card__row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  line-height: 1.5;
+}
+
+.order-card__label {
+  flex-shrink: 0;
+  width: 152rpx;
+  font-size: 26rpx;
+  color: $uni-text-color-grey;
+}
+
+.order-card__value {
+  flex: 1;
+  min-width: 0;
+  font-size: 26rpx;
+  color: $uni-text-color;
+  word-break: break-all;
+}
+
+.order-card__value--emphasis {
+  font-weight: 500;
+  color: $uni-color-primary;
 }
 
 .loading-overlay {

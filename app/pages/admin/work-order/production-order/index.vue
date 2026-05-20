@@ -35,10 +35,15 @@
           v-for="item in orderList"
           :key="item.id"
           :title="item.code || `任务单 ${item.id}`"
-          :label="cellLabel(item)"
           clickable
           @click="onOrderClick(item)"
         >
+          <template #label>
+            <view class="cell-multiline-label">
+              <text class="cell-label-line">{{ cellLabelLine1(item) }}</text>
+              <text class="cell-label-line cell-label-line--sub">{{ cellLabelLine2(item) }}</text>
+            </view>
+          </template>
           <template #value>
             <view class="cell-right">
               <wd-tag size="small" type="primary">{{ item.status_display || item.status }}</wd-tag>
@@ -73,7 +78,7 @@ import { clampApiListLimit, fetchAllPagesWithPagedApi } from '@/utils/common.js'
 
 /**
  * 生产任务单列表（管理员）
- * @description 分页列表、按状态与产品筛选、进入详情与新建
+ * @description 分页列表、按状态与产品筛选、进入详情与新建（两行副标题）
  */
 export default {
   data() {
@@ -206,16 +211,26 @@ export default {
     },
 
     /**
-     * 列表项副标题
+     * 副标题第一行：产品名称、产品编码
      * @param {Object} item - 任务单行
      * @returns {string}
      */
-    cellLabel(item) {
-      const product = item.product_name || '-'
+    cellLabelLine1(item) {
+      const name = item.product_name || '-'
+      const code = item.product_code || '-'
+      return `${name}  ${code}`
+    },
+
+    /**
+     * 副标题第二行：生产数量、派工进度
+     * @param {Object} item - 任务单行
+     * @returns {string}
+     */
+    cellLabelLine2(item) {
       const qty = item.quantity != null ? item.quantity : '-'
       const done = item.completed_dispatch_count != null ? item.completed_dispatch_count : 0
       const all = item.dispatch_order_count != null ? item.dispatch_order_count : 0
-      return `${product}  数量: ${qty}  派工进度: ${done}/${all}`
+      return `数量 ${qty}  派工进度 ${done}/${all}`
     },
 
     /**
@@ -368,6 +383,23 @@ export default {
   display: flex;
   align-items: center;
   gap: 12rpx;
+}
+
+.cell-multiline-label {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.cell-label-line {
+  font-size: 24rpx;
+  color: $uni-text-color-grey;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.cell-label-line--sub {
+  font-size: 22rpx;
 }
 
 .loading-overlay {

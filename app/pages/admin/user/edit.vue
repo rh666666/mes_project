@@ -41,6 +41,9 @@
       <wd-button type="primary" size="large" :loading="isSaving" @click="onSave">
         {{ isSaving ? '保存中...' : '保存' }}
       </wd-button>
+      <wd-button type="danger" size="large" plain @click="onDelete">
+        删除用户
+      </wd-button>
     </view>
 
     <!-- 部门选择弹窗 -->
@@ -292,6 +295,57 @@ export default {
       } finally {
         this.isSaving = false
       }
+    },
+
+    /**
+     * 显示删除确认弹窗
+     */
+    onDelete() {
+      const displayName = this.userInfo.name || this.userInfo.username || '该用户'
+      uni.showModal({
+        title: '确认删除',
+        content: `确定要删除用户 "${displayName}" 吗？此操作不可恢复。`,
+        confirmText: '删除',
+        confirmColor: '#ee0a24',
+        success: (res) => {
+          if (res.confirm) {
+            this.onConfirmDelete()
+          }
+        }
+      })
+    },
+
+    /**
+     * 确认删除用户
+     * @async
+     */
+    async onConfirmDelete() {
+      if (!this.userId) return
+
+      showAppLoading({ title: '删除中...' })
+      try {
+        const res = await authApi.deleteUser(this.userId)
+        if (res.code === 2000) {
+          uni.showToast({
+            title: '删除成功',
+            icon: 'success'
+          })
+          uni.navigateBack()
+        } else {
+          uni.showToast({
+            title: res.msg || '删除失败',
+            icon: 'none'
+          })
+        }
+      } catch (error) {
+        console.error('删除用户失败:', error)
+        uni.showToast({
+          title: error.msg || '删除失败',
+          icon: 'none'
+        })
+      } finally {
+        hideAppLoading()
+      }
     }
   }
 }
@@ -325,6 +379,9 @@ export default {
   padding: 24rpx;
   background-color: $uni-bg-color-white;
   border-top: 1px solid $uni-border-color;
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
 
   :deep(.wd-button) {
     width: 100%;

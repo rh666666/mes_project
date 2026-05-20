@@ -38,10 +38,15 @@
           v-for="item in orderList"
           :key="item.id"
           :title="item.code || `派工单 ${item.id}`"
-          :label="cellLabel(item)"
           clickable
           @click="onRowClick(item)"
         >
+          <template #label>
+            <view class="cell-multiline-label">
+              <text class="cell-label-line">{{ cellLabelLine1(item) }}</text>
+              <text class="cell-label-line cell-label-line--sub">{{ cellLabelLine2(item) }}</text>
+            </view>
+          </template>
           <template #value>
             <view class="cell-right">
               <wd-tag size="small" type="primary">{{ item.status_display || item.status }}</wd-tag>
@@ -70,7 +75,7 @@ import { clampApiListLimit, fetchAllPagesWithPagedApi } from '@/utils/common.js'
 
 /**
  * 工序派工单列表（管理员）
- * @description 分页列表、按状态与工序筛选；支持从任务单详情传入 production_order 过滤
+ * @description 分页列表、按状态与工序筛选；支持从任务单详情传入 production_order 过滤（两行副标题）
  */
 export default {
   data() {
@@ -219,17 +224,26 @@ export default {
     },
 
     /**
-     * 列表项副标题
+     * 副标题第一行：生产任务单号、工序名称
      * @param {Object} item - 派工单行
      * @returns {string}
      */
-    cellLabel(item) {
+    cellLabelLine1(item) {
       const po = item.production_order_code || '-'
       const proc = item.process_name || '-'
+      return `${po}  ${proc}`
+    },
+
+    /**
+     * 副标题第二行：工序顺序、完成进度
+     * @param {Object} item - 派工单行
+     * @returns {string}
+     */
+    cellLabelLine2(item) {
       const seq = item.sequence != null ? item.sequence : '-'
       const done = item.completed_quantity != null ? item.completed_quantity : 0
       const qty = item.quantity != null ? item.quantity : '-'
-      return `${po}  ${proc}  序${seq}  进度 ${done}/${qty}`
+      return `顺序 ${seq}  进度 ${done}/${qty}`
     },
 
     /**
@@ -385,6 +399,23 @@ export default {
   display: flex;
   align-items: center;
   gap: 12rpx;
+}
+
+.cell-multiline-label {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.cell-label-line {
+  font-size: 24rpx;
+  color: $uni-text-color-grey;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.cell-label-line--sub {
+  font-size: 22rpx;
 }
 
 .loading-overlay {

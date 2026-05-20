@@ -32,10 +32,15 @@
           v-for="item in orderList"
           :key="item.id"
           :title="item.code || `质检 ${item.id}`"
-          :label="cellLabel(item)"
           clickable
           @click="onRowClick(item)"
         >
+          <template #label>
+            <view class="cell-multiline-label">
+              <text class="cell-label-line">{{ cellLabelLine1(item) }}</text>
+              <text class="cell-label-line cell-label-line--sub">{{ cellLabelLine2(item) }}</text>
+            </view>
+          </template>
           <template #value>
             <view class="cell-right">
               <wd-tag size="small" type="primary">{{ item.status_display || item.status }}</wd-tag>
@@ -169,18 +174,43 @@ export default {
     },
 
     /**
-     * 列表项副标题
+     * 副标题第一行：类型、生产任务单号
      * @param {Object} item - 质检任务单行
      * @returns {string}
      */
-    cellLabel(item) {
+    cellLabelLine1(item) {
       const typeLabel = item.type_display || item.type || '-'
       const po = item.production_order_code || '-'
+      return `${typeLabel}  ${po}`
+    },
+
+    /**
+     * 副标题第二行：物料、顺序（质检数量）、合格率
+     * @param {Object} item - 质检任务单行
+     * @returns {string}
+     */
+    cellLabelLine2(item) {
       const product = item.product_name || '-'
-      const qty = item.quantity != null ? item.quantity : '-'
-      const qualified = item.qualified_quantity != null ? item.qualified_quantity : 0
-      const unqualified = item.unqualified_quantity != null ? item.unqualified_quantity : 0
-      return `${typeLabel}  ${po}  ${product}  检${qty}  合格${qualified}/不合格${unqualified}`
+      const sequence = item.quantity != null ? item.quantity : '-'
+      const passRate = this.formatPassRate(item)
+      return `${product}  顺序 ${sequence}  合格率 ${passRate}`
+    },
+
+    /**
+     * 格式化合格率
+     * @param {Object} item - 质检任务单行
+     * @returns {string}
+     */
+    formatPassRate(item) {
+      const qty = Number(item.quantity)
+      if (!qty || qty <= 0) {
+        return '-'
+      }
+      if (item.status === 'pending') {
+        return '-'
+      }
+      const qualified = Number(item.qualified_quantity) || 0
+      return `${((qualified / qty) * 100).toFixed(1)}%`
     },
 
     /**
@@ -333,6 +363,23 @@ export default {
   display: flex;
   align-items: center;
   gap: 12rpx;
+}
+
+.cell-multiline-label {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.cell-label-line {
+  font-size: 24rpx;
+  color: $uni-text-color-grey;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.cell-label-line--sub {
+  font-size: 22rpx;
 }
 
 .loading-overlay {
