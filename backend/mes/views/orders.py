@@ -340,8 +340,6 @@ class ProductionOrderViewSet(viewsets.ViewSet):
 
         try:
             dispatch_orders = order.publish()
-            # 自动创建质检任务
-            QualityCheckOrder.auto_create_checks(order, order.quantity)
             return DetailResponse(data={
                 "production_order": ProductionOrderSerializer(order).data,
                 "dispatch_orders_count": len(dispatch_orders)

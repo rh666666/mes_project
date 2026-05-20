@@ -3,6 +3,7 @@ import logging
 from typing import Any
 
 from django.db import models, transaction
+from django.db.models import Max, Sum
 
 from system.models import CoreModel
 from utils import generate_date_sequence_code
@@ -429,8 +430,25 @@ class DispatchOrder(CoreModel):
             
             # 触发下一工序可用
             self.trigger_next_process()
+
+            # 末序报工达到进度阈值时创建质检任务
+            QualityCheckOrder.create_checks_on_report(self, report_quantity)
             
             return report
+
+    def is_last_sequence(self) -> bool:
+        """判断当前派工单是否为生产任务单的末序工序。
+
+        Returns:
+            bool: 末序为 True
+        """
+        if not self.production_order_id:
+            return False
+        agg = DispatchOrder.objects.filter(
+            production_order_id=self.production_order_id,
+        ).aggregate(max_seq=Max("sequence"))
+        max_seq = agg["max_seq"]
+        return max_seq is not None and self.sequence == max_seq
 
     def sync_parent_status(self) -> None:
         """递归同步父工单状态
@@ -556,49 +574,162 @@ class QualityCheckOrder(CoreModel):
         super().save(*args, **kwargs)
 
     @classmethod
-    def auto_create_checks(cls, production_order: ProductionOrder, total_quantity: int) -> list:
-        """根据生产数量自动创建质检任务
+    def _get_last_sequence_max(cls, production_order_id: int) -> int | None:
+        """获取生产任务单末序工序的 sequence 值。
 
         Args:
-            production_order: 生产任务单
-            total_quantity: 总生产数量
-            
+            production_order_id: 生产任务单 ID
+
         Returns:
-            list: 创建的质检任务列表
+            int | None: 末序 sequence，无派工单时返回 None
         """
-        with transaction.atomic():
-            checks = []
-            
-            # 1. 首检：前10%的产品
-            first_check_qty = max(1, int(total_quantity * cls.FIRST_CHECK_PERCENTAGE / 100))
-            checks.append(cls.objects.create(
+        agg = DispatchOrder.objects.filter(
+            production_order_id=production_order_id,
+        ).aggregate(max_seq=Max("sequence"))
+        return agg["max_seq"]
+
+    @classmethod
+    def _get_last_sequence_reported_quantity(cls, production_order_id: int) -> int:
+        """汇总末序派工单的全部报工数量。
+
+        Args:
+            production_order_id: 生产任务单 ID
+
+        Returns:
+            int: 末序累计报工数量
+        """
+        max_seq = cls._get_last_sequence_max(production_order_id)
+        if max_seq is None:
+            return 0
+        agg = ProductionReport.objects.filter(
+            dispatch_order__production_order_id=production_order_id,
+            dispatch_order__sequence=max_seq,
+        ).aggregate(total=Sum("quantity"))
+        return int(agg["total"] or 0)
+
+    @classmethod
+    def _process_check_milestones(cls, total_quantity: int) -> list[int]:
+        """计算过程检进度档位（产量百分比对应的累计件数）。
+
+        Args:
+            total_quantity: 生产任务单计划数量
+
+        Returns:
+            list[int]: 按升序排列的档位累计件数
+        """
+        interval = max(1, int(total_quantity * cls.PROCESS_CHECK_INTERVAL / 100))
+        return list(range(interval, total_quantity, interval))
+
+    @classmethod
+    def create_checks_on_report(
+        cls,
+        dispatch_order: DispatchOrder,
+        report_quantity: int,
+    ) -> list["QualityCheckOrder"]:
+        """末序报工后按生产进度阈值创建质检任务。
+
+        首检：末序累计报工首次达到计划产量 10% 时生成。
+        过程检：每跨过计划产量 30% 的增量档位时生成一条。
+        完工检：当前报工的末序派工单状态变为已完成时生成，数量为剩余未检数量。
+
+        Args:
+            dispatch_order: 报工的工序派工单
+            report_quantity: 本次报工数量
+
+        Returns:
+            list[QualityCheckOrder]: 本次新创建的质检任务列表
+        """
+        if not dispatch_order.is_last_sequence():
+            return []
+
+        production_order = dispatch_order.production_order
+        if not production_order or not production_order.product_id:
+            logger.warning(
+                "报工未触发质检：生产任务单或产品缺失，派工单 %s",
+                dispatch_order.id,
+            )
+            return []
+
+        total_quantity = production_order.quantity
+        new_cumulative = cls._get_last_sequence_reported_quantity(production_order.id)
+        prev_cumulative = new_cumulative - report_quantity
+        created: list[QualityCheckOrder] = []
+
+        # 首检
+        first_threshold = max(1, int(total_quantity * cls.FIRST_CHECK_PERCENTAGE / 100))
+        if (
+            prev_cumulative < first_threshold <= new_cumulative
+            and not cls.objects.filter(
                 production_order=production_order,
-                product=production_order.product,
                 type=cls.Type.FIRST,
-                quantity=first_check_qty,
-                status=cls.Status.PENDING
-            ))
-            
-            # 2. 过程检：每隔30%的产品
-            interval = max(1, int(total_quantity * cls.PROCESS_CHECK_INTERVAL / 100))
-            for i in range(interval, total_quantity, interval):
-                process_check_qty = min(interval, total_quantity - i)
-                checks.append(cls.objects.create(
+            ).exists()
+        ):
+            first_check_qty = max(1, int(total_quantity * cls.FIRST_CHECK_PERCENTAGE / 100))
+            created.append(
+                cls.objects.create(
+                    production_order=production_order,
+                    product=production_order.product,
+                    type=cls.Type.FIRST,
+                    quantity=first_check_qty,
+                    status=cls.Status.PENDING,
+                )
+            )
+
+        # 过程检
+        interval = max(1, int(total_quantity * cls.PROCESS_CHECK_INTERVAL / 100))
+        milestones = cls._process_check_milestones(total_quantity)
+        existing_process_count = cls.objects.filter(
+            production_order=production_order,
+            type=cls.Type.PROCESS,
+        ).count()
+        newly_crossed = [
+            m
+            for m in milestones
+            if prev_cumulative < m <= new_cumulative
+        ]
+        for offset, milestone in enumerate(newly_crossed):
+            idx = existing_process_count + offset
+            if idx >= len(milestones):
+                break
+            process_check_qty = min(interval, total_quantity - milestone)
+            created.append(
+                cls.objects.create(
                     production_order=production_order,
                     product=production_order.product,
                     type=cls.Type.PROCESS,
                     quantity=process_check_qty,
-                    status=cls.Status.PENDING
-                ))
-            
-            # 3. 完工检：所有产品
-            checks.append(cls.objects.create(
+                    status=cls.Status.PENDING,
+                )
+            )
+
+        # 完工检
+        if (
+            dispatch_order.status == DispatchOrder.Status.COMPLETED
+            and not cls.objects.filter(
                 production_order=production_order,
-                product=production_order.product,
                 type=cls.Type.COMPLETION,
-                quantity=total_quantity,
-                status=cls.Status.PENDING
-            ))
-            
-            logger.info("已为生产任务单 %s 创建了 %d 个质检任务", production_order.code, len(checks))
-            return checks
+            ).exists()
+        ):
+            inspected_agg = cls.objects.filter(
+                production_order=production_order,
+            ).aggregate(total=Sum("quantity"))
+            already_inspected = int(inspected_agg["total"] or 0)
+            remainder = total_quantity - already_inspected
+            if remainder > 0:
+                created.append(
+                    cls.objects.create(
+                        production_order=production_order,
+                        product=production_order.product,
+                        type=cls.Type.COMPLETION,
+                        quantity=remainder,
+                        status=cls.Status.PENDING,
+                    )
+                )
+
+        if created:
+            logger.info(
+                "报工触发质检：生产任务单 %s，新建 %d 条质检任务",
+                production_order.code,
+                len(created),
+            )
+        return created
